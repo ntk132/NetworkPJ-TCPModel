@@ -9,7 +9,18 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+/****************************************************************************************************
+    
+    Project the online library. Using TCP client-server model
+    Main features:
+    - Login/Logout
+    - Register new account
+    - Up coin for account
+    - Download book
+    - View book with trial/full mode
 
+
+*****************************************************************************************************/
 namespace Server
 {
     public partial class MainForm : Form
@@ -18,17 +29,23 @@ namespace Server
         int MAX_COIN = 25;
 
         private TCPModel tcpServer = new TCPModel();
+        private TCPModel tcpDownloader = new TCPModel();
 
+        /*
+         The DB pathes - This project use the simplest DB - files .txt
+             */
         private String pathUserFile = @"D:\VS 2015\NetworkPJ\Server\Server\Data\User.txt";
         private String pathBookFolder = @"D:\VS 2015\NetworkPJ\Server\Server\Books";
         private String pathDownload = @"D:\VS 2015\NetworkPJ\Server\Server\Data\Download.txt";
 
+        // Variables used for mapping data from DB
         List<String> dataUserFile;
         List<String> dataBookNameList;
         List<String> dataDownload;
 
         List<String> userConnected = new List<string>();
 
+        // Downloader flag
         bool isTransering = false;
 
         public MainForm()
@@ -107,46 +124,21 @@ namespace Server
         private void Listener(object obj)
         {
             int index = (int)obj;
-            String filename = "";
+
             while (true)
             {
-                if (!isTransering)
+                // Get data
+                String dataIn = tcpServer.ReceiveData(obj);
+
+                if (dataIn != "" || dataIn != null || dataIn.Length > 0)
                 {
-                    // Get data
-                    String dataIn = tcpServer.ReceiveData(obj);
-                    //String dataIn = server.ReceiveData(obj);
-
-                    /*if (dataIn == "Start")
-                    {
-                        filename = tcpServer.ReceiveData(obj);
-
-                        MessageBox.Show(filename);
-                        isTransering = true;
-                        continue;
-                    }
-                    else*/ if (dataIn != "" || dataIn != null || dataIn.Length > 0)
-                    {
-                        //MessageBox.Show(dataIn);
-                        ProcessingData(dataIn, (int)obj);
-                    }
-                }
-                else
-                {
-                    if (tcpServer.ReceiveFile(pathBookFolder + @"\" + filename, index) == 1)
-                    {
-                        MessageBox.Show("Download successfully!");
-
-                        isTransering = false;
-                    }
-                    else
-                    {
-                        MessageBox.Show("Download Failed!");
-                    }
-
+                    //MessageBox.Show(dataIn);
+                    ProcessingData(dataIn, (int)obj);
                 }
             }
         }
 
+        /**********************************************************************************************/
         /********  ********  *********  ********/
         // Devide the data received from the client
         // then determine which type of that request
@@ -421,6 +413,7 @@ namespace Server
         private void PayCoinToDownloadBook(String bookname, String value, int index)
         {
             String msg = "PAYMENT|";
+            String pthFl = pathBookFolder + @"\" + bookname;
             // Update DB: user coin, download list
             if (UpdateUserInfoDB(dataUserFile, userConnected[index], null, value))
             {
@@ -428,9 +421,10 @@ namespace Server
                 // Payment processing is done
                 tcpServer.SendDataToClient(msg + "DONE|" + bookname, index);
 
-                // Send book to client
+                /* Send book to client */
                 //SendFileToClient(bookname, index);
-                tcpServer.SendFile(pathBookFolder + @"\" + bookname, index);
+                //tcpServer.SendFile(pathBookFolder + @"\" + bookname, index);
+                Downloader_SendingFile(pthFl, bookname, index);
 
                 // Update the DB
                 NewBookDownloaded(bookname, userConnected[index]);
@@ -558,11 +552,105 @@ namespace Server
 
         }
 
+        /****************************************************************************************
+         Download Server:
+         - Create new TCP server service the download feature
+         - the client create new connection to this server to download book
+         - The book's info is got from the main server - the library
+         *****************************************************************************************/
+        private void InitDownloader()
+        {
+            try
+            {
+                tcpDownloader.InitServer("127.0.100.6", "6066");
+
+                Thread t = new Thread(SetDownloaderConnection);
+                t.Start();
+            }
+            catch
+            {
+                tcpDownloader.StopServer();
+            }
+        }
+
+        private void SetDownloaderConnection(object obj)
+        {
+            while (true)
+            {
+                if (tcpDownloader.AcceptConnection())
+                {
+                    MessageBox.Show(tcpDownloader.remotEndPoint);
+
+                    Thread t = new Thread(DownloaderListener);
+                    t.Start(tcpDownloader.counter - 1);
+                }
+            }
+        }
+
+        private void DownloaderListener(object obj)
+        {
+            int index = (int)obj;
+            String filename = "";
+            while (true)
+            {
+                if (!isTransering)
+                {
+                    // Get data
+                    String dataIn = tcpDownloader.ReceiveData(obj);
+                    
+                    if (dataIn == "Start")
+                    {
+                        filename = tcpDownloader.ReceiveData(obj);
+
+                        //MessageBox.Show(filename);
+                        isTransering = true;
+                        continue;
+                    }
+                }
+                else
+                {
+                    if (tcpDownloader.ReceiveFile(pathBookFolder + @"\" + filename, index) == 1)
+                    {
+                        MessageBox.Show("Download successfully!");
+
+                        isTransering = false;
+                    }
+                    else
+                    {
+                        MessageBox.Show("Download Failed!");
+                    }
+
+                }
+            }
+        }
+
+        private void Downloader_SendingFile(String pathFile, String bookname, int index)
+        {
+            Thread.Sleep(500);
+            // Send the start signal
+            tcpDownloader.SendDataToClient("Start", index);
+
+            // Send the file
+            tcpDownloader.SendDataToClient(bookname, index);
+
+            // service only client
+            tcpDownloader.SendFile(pathFile, index);
+
+            // Send the end signal or the last connected
+            tcpDownloader.SendDataToClient("End", index);
+        }
+        /*****************************************************************************************
+         End the programming of the downloader.
+        ******************************************************************************************/
         private void btConnect_Click(object sender, EventArgs e)
         {
             try
             {
+                // Init the main(library) server
                 tcpServer.InitServer(tbIP.Text, tbPort.Text);
+
+                // Init the downloader
+                InitDownloader();
 
                 Thread t = new Thread(SetConnection);
                 t.Start();
@@ -587,6 +675,7 @@ namespace Server
         {
             try
             {
+                tcpDownloader.StopServer();
                 tcpServer.StopServer();
 
                 Application.Exit();

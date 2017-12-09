@@ -20,6 +20,7 @@ namespace Server
         private byte[] dataIn;
         private byte[] dataOut;
         public String remotEndPoint = "";
+
         public void InitServer(String _ip, String _port)
         {
             // get ip address
@@ -90,11 +91,29 @@ namespace Server
         {
             byte[] outFile = File.ReadAllBytes(pathFile);
 
+            /*
             using (NetworkStream ns = new NetworkStream(socket[index]))
             {
                 ns.Write(outFile, 0, outFile.Length);
                 ns.Flush();
             }
+            */
+
+            /*
+            try
+            {
+                socket[index].SendFile(pathFile, null, null, TransmitFileOptions.Disconnect);
+            }
+            catch
+            {
+                socket[index].SendFile(pathFile, null, null, TransmitFileOptions.ReuseSocket);
+            }
+            */
+            socket[index].SendFile(pathFile);
+            
+            //socket[index].SendFile(pathFile, null, null, TransmitFileOptions.UseDefaultWorkerThread);
+            //socket[index].SendFile(null, null, null, TransmitFileOptions.ReuseSocket);
+            //socket[index].Send(outFile);
         }
 
         public int ReceiveFile(String savePath, int index)
@@ -110,23 +129,21 @@ namespace Server
                 {
                     while (true)
                     {
-                        if (!ns.DataAvailable)
-                            break;
-
-                        thisRead = ns.Read(dataByte, 0, blockSize);
+                        //thisRead = ns.Read(dataByte, 0, blockSize);
+                        thisRead = socket[index].Receive(dataByte, 0, blockSize, SocketFlags.None);
                         if (thisRead == 0) break;
                         ms.Write(dataByte, 0, thisRead);
                     }
 
                     File.WriteAllBytes(savePath, ms.ToArray());
 
-                    ns.Close();
+                    //ns.Close();
 
                     return 1;
                 }
                 catch
                 {
-                    ns.Close();
+                    //ns.Close();
 
                     return -1;
                 }

@@ -16,6 +16,7 @@ namespace Client
     {
         private String loginStr;
         private TCPModel tcpClient = new TCPModel();
+        private TCPModel tcpDownloader = new TCPModel();
         private String pathDownload = @"D:\VS 2015\NetworkPJ\Client\Client\Downloads";
 
         private int pnResultHeight = 0;
@@ -26,6 +27,7 @@ namespace Client
 
         bool isTransering = false;
 
+        #region Initialize the client with own downloader
         public MainForm()
         {
             InitializeComponent();
@@ -45,9 +47,13 @@ namespace Client
                 // get ip address
                 String ip = "127.127.100.6";
                 // get port number
-                int port = 6066;
+                int port = 6060;
 
+                // Create the main client
                 tcpClient.ConnectToServer(ip, port);
+
+                // Create the downloader
+                InitDownloader();
 
                 Thread t = new Thread(Listener);
                 t.Start();
@@ -75,6 +81,31 @@ namespace Client
             //MessageBox.Show(loginStr);            
         }
 
+
+        // this methos always listen any message from server
+        private void Listener(object obj)
+        {
+            while (true)
+            {
+                try
+                {
+                    // Get data
+                    String dataIn = tcpClient.Receive_Data(obj);
+
+                    if (dataIn != "" || dataIn != null || dataIn.Length > 0)
+                    {
+                        //MessageBox.Show(dataIn);
+                        ProcessingData(dataIn);
+                    }
+                }
+                catch
+                {
+
+                }
+            }
+        }
+        #endregion
+
         private void RunLoginForm()
         {
             /**** Run login form ****/
@@ -92,60 +123,16 @@ namespace Client
                 else
                     this.Close();   // If user is not login, then close this app
             }
-            else if (lfrm.data == "regis")
+            else if (lfrm.data == "1")
             {
                 RunRegisForm();
             }
-            else if (lfrm.data == "exit")
+            else if (lfrm.data == "-1")
             {
                 this.Close();
             }
         }
 
-        // this methos always listen any message from server
-        private void Listener(object obj)
-        {
-            String filename = "";
-            while (true)
-            {
-                if (!isTransering)
-                {
-                    // Get data
-                    String dataIn = tcpClient.Receive_Data(obj);
-                    //MessageBox.Show(dataIn);
-                    /*if (dataIn == "Start")
-                    {
-                        filename = tcpClient.Receive_Data(obj);
-
-                        MessageBox.Show(filename);
-
-                        isTransering = true;
-
-                        continue;
-                    }
-                    else*/ if (dataIn != "" || dataIn != null || dataIn.Length > 0)
-                    {
-                        //MessageBox.Show(dataIn);
-                        ProcessingData(dataIn);
-                    }
-                }
-                else
-                {
-                    if (tcpClient.ReceiveFile(pathDownload + @"\" + filename) == 1)
-                    {
-                        MessageBox.Show("Download successfully!");
-
-                        //isTransering = false;
-                    }
-                    else
-                    {
-                        MessageBox.Show("Download Failed!");
-                    }
-
-                    isTransering = false;
-                }
-            }
-        }
 
         /// <summary>
         /// This function process the data which receiv from server,
@@ -188,6 +175,7 @@ namespace Client
 
                         this.Visible = false;
 
+                        // regis again
                         RunLoginForm();
                     }
 
@@ -203,6 +191,7 @@ namespace Client
                     {
                         MessageBox.Show("Cannot regis! The username is exsisted!");
                     }
+
                     break;
                 // Receive this after sending searching request
                 case "SEARCH":
@@ -224,9 +213,7 @@ namespace Client
 
                         pnResult.Invoke(new MethodInvoker( delegate {
                                 this.pnResult.Controls.Add(bc);
-                            }));
-
-                                                
+                            }));                                                
                     }
                     else if (temp[1] == "ERROR")
                     {
@@ -259,12 +246,10 @@ namespace Client
                 case "PAYMENT":
                     if (temp[1] == "DONE")
                     {
-                        isTransering = true;
+                        // Create the downloader
+                        //InitDownloader();
+
                         MessageBox.Show("Payment is succssful! The download is in background!");
-
-                        //tcpClient.ReceiveFile(pathDownload + @"\" + temp[2]);
-
-                        //MessageBox.Show("Download successfully!");
                     }
                     else if (temp[1] == "NOTNOUGH")
                     {
@@ -278,6 +263,95 @@ namespace Client
             }
         }
 
+
+        #region Downloader programming section
+        /*****************************************************************************************
+        Programming for downloader 
+        - Listen and receive the book sent from the server
+        - Auto connect to the downloader of server when this client is starting
+         *****************************************************************************************/
+        private void InitDownloader()
+        {
+            try
+            {
+                // get ip address
+                String ip = "127.0.100.6";
+                // get port number
+                int port = 6066;
+
+                tcpDownloader.ConnectToServer(ip, port);
+
+                Thread t = new Thread(DownloaderListener);
+                t.Start();
+            }
+            catch
+            {
+                // if connecting is failed the turn on the offline mode
+
+                return;
+            }
+        }
+
+        // this methos always listen any message from server
+        private void DownloaderListener(object obj)
+        {
+            String filename = "";
+            while (true)
+            {
+                if (!isTransering)
+                {
+                    // Get data
+                    String dataIn = tcpDownloader.Receive_Data(obj);
+
+                    if (dataIn == "Start")
+                    {
+                        filename = tcpDownloader.Receive_Data(obj);
+
+                        MessageBox.Show(filename);
+                        isTransering = true;
+                        continue;
+                    }
+                }
+                else
+                {
+                    if (tcpDownloader.ReceiveFile(pathDownload + @"\" + filename) == 1)
+                    {
+                        MessageBox.Show("Download successfully!");                        
+                    }
+                    else
+                    {
+                        MessageBox.Show("Download Failed!");
+                    }
+
+                    isTransering = false;
+                }
+            }
+        }
+
+        private void Downloader_SendingFile(String pathFile, String bookname, int index)
+        {
+            // Send the start signal
+            tcpDownloader.Send_Data("Start");
+
+            // Send the file
+            tcpDownloader.Send_Data(bookname);
+
+            // service only client
+            tcpDownloader.SendFile(pathFile);
+
+            // Send the end signal
+            tcpDownloader.Send_Data("End");
+        }
+        /*****************************************************************************************
+         END: the programming for the downloader
+        ******************************************************************************************/
+        #endregion
+
+        /*****************************************************************************************
+        Processing the events when click program button
+        and other supported methods.
+        
+        ******************************************************************************************/
         /******** This function process the seraching book ********/
         private void btSearch_Click(object sender, EventArgs e)
         {
@@ -436,6 +510,7 @@ namespace Client
         {
             try
             {
+                tcpDownloader.Disconnect();
                 tcpClient.Disconnect();
             }
             catch

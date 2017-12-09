@@ -43,14 +43,14 @@ namespace Client
 
         private void btCancel_Click(object sender, EventArgs e)
         {
-            data = "exit";
+            data = "1";
 
             this.Close();
         }
 
         private void btRegis_Click(object sender, EventArgs e)
         {
-            data = "regis";
+            data = "-1";
 
             this.Close();
         }
