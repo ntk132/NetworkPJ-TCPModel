@@ -12,8 +12,8 @@ namespace Client
     class TCPModel
     {
         private TcpClient tcp;
-        private Stream stm;
-        //private NetworkStream networkStream;
+        //private Stream stm;
+        private NetworkStream networkStream;
         private byte[] dataIn;
         private byte[] dataOut;
 
@@ -25,8 +25,8 @@ namespace Client
             // start connection
             tcp.Connect(ip, port);
             // set stream for this client
-            stm = tcp.GetStream();
-            //networkStream = tcp.GetStream();
+            //stm = tcp.GetStream();
+            networkStream = tcp.GetStream();
 
             dataIn = new byte[100];
             dataOut = new byte[100];
@@ -38,8 +38,8 @@ namespace Client
             try
             {
                 // get message from server
-                int k = stm.Read(dataIn, 0, 100);
-                //int k = networkStream.Read(dataIn, 0, 100);
+                //int k = stm.Read(dataIn, 0, 100);
+                int k = networkStream.Read(dataIn, 0, 100);
 
                 char[] c = new char[k];
                 // Create buffer
@@ -64,14 +64,15 @@ namespace Client
             try
             {
                 // Create buffer
+                dataOut = new byte[100];
 
                 // Encode the message to byte[]
                 ASCIIEncoding asen = new ASCIIEncoding();
                 dataOut = asen.GetBytes(str);
 
                 // Send the request to server
-                stm.Write(dataOut, 0, dataOut.Length);
-                //networkStream.Write(dataOut, 0, dataOut.Length);
+                //stm.Write(dataOut, 0, dataOut.Length);
+                networkStream.Write(dataOut, 0, dataOut.Length);
 
                 return true;
             }
@@ -93,17 +94,16 @@ namespace Client
             }
             */
             /*
-            networkStream.Write(outFile, 0, outFile.Length);
-            networkStream.Flush();
-            */
-            
             stm.Write(outFile, 0, outFile.Length);
             stm.Flush();
-            
+            */
+            networkStream.Write(outFile, 0, outFile.Length);
+            networkStream.Flush();
         }
 
         public int ReceiveFile(String savePath)
         {
+            /*
             int thisRead = 0;
             int blockSize = 1024;
             Byte[] dataByte = new Byte[blockSize];
@@ -114,11 +114,65 @@ namespace Client
             {
                 while (true)
                 {
-                    //thisRead = networkStream.Read(dataByte, 0, blockSize);
                     thisRead = stm.Read(dataByte, 0, blockSize);
                     if (thisRead == 0 || dataByte == buff ||  dataByte.Length == buff.Length) break;
                     ms.Write(dataByte, 0, thisRead);
                     buff = dataByte;
+                }
+
+                File.WriteAllBytes(savePath, ms.ToArray());
+
+                return 1;
+            }
+            catch
+            {
+                return -1;
+            }
+            */
+            
+            int thisRead = 0;
+            int blockSize = 1024;
+            Byte[] dataByte = new Byte[blockSize];
+
+            var ms = new MemoryStream();
+
+            /*
+            using (NetworkStream ns = tcp.GetStream())
+            {
+                try
+                {
+                    while (true)
+                    {
+                        if (!ns.DataAvailable)
+                            break;
+
+                        thisRead = ns.Read(dataByte, 0, blockSize);
+                        ms.Write(dataByte, 0, thisRead);
+                    }
+
+                    File.WriteAllBytes(savePath, ms.ToArray());
+
+                    ns.Close();
+
+                    return 1;
+                }
+                catch
+                {
+                    ns.Close();
+
+                    return -1;
+                }
+            }
+            */
+            try
+            {
+                while (true)
+                {
+                    if (!networkStream.DataAvailable)
+                        break;
+
+                    thisRead = networkStream.Read(dataByte, 0, blockSize);
+                    ms.Write(dataByte, 0, thisRead);
                 }
 
                 File.WriteAllBytes(savePath, ms.ToArray());
@@ -135,8 +189,8 @@ namespace Client
         {
             try
             {
-                stm.Close();
-                //networkStream.Close();
+                //stm.Close();
+                networkStream.Close();
                 tcp.Close();
             }
             catch

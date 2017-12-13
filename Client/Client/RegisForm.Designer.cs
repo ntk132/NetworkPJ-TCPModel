@@ -92,8 +92,9 @@
             // 
             // btRegis
             // 
-            this.btRegis.BackColor = System.Drawing.SystemColors.Control;
+            this.btRegis.BackColor = System.Drawing.Color.LightGray;
             this.btRegis.FlatAppearance.BorderColor = System.Drawing.SystemColors.ControlDark;
+            this.btRegis.FlatAppearance.BorderSize = 0;
             this.btRegis.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btRegis.Location = new System.Drawing.Point(282, 215);
             this.btRegis.Name = "btRegis";
@@ -134,6 +135,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(379, 261);
             this.Controls.Add(this.cbCheckLience);
             this.Controls.Add(this.tbEmail);
@@ -146,7 +148,7 @@
             this.Controls.Add(this.tbName);
             this.Controls.Add(this.label1);
             this.Font = new System.Drawing.Font("Century Gothic", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "RegisForm";
             this.Text = "RegisForm";
             this.ResumeLayout(false);

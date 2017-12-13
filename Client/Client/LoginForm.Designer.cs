@@ -72,7 +72,7 @@
             // 
             // btLogin
             // 
-            this.btLogin.BackColor = System.Drawing.Color.SkyBlue;
+            this.btLogin.BackColor = System.Drawing.Color.Silver;
             this.btLogin.DialogResult = System.Windows.Forms.DialogResult.OK;
             this.btLogin.FlatAppearance.BorderSize = 0;
             this.btLogin.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -86,7 +86,7 @@
             // 
             // btCancel
             // 
-            this.btCancel.BackColor = System.Drawing.SystemColors.ControlDark;
+            this.btCancel.BackColor = System.Drawing.SystemColors.Control;
             this.btCancel.FlatAppearance.BorderSize = 0;
             this.btCancel.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btCancel.Location = new System.Drawing.Point(123, 111);
@@ -99,7 +99,7 @@
             // 
             // btRegis
             // 
-            this.btRegis.BackColor = System.Drawing.Color.DarkOrange;
+            this.btRegis.BackColor = System.Drawing.Color.Gainsboro;
             this.btRegis.FlatAppearance.BorderSize = 0;
             this.btRegis.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btRegis.Location = new System.Drawing.Point(248, 158);
@@ -114,6 +114,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(379, 206);
             this.Controls.Add(this.btRegis);
             this.Controls.Add(this.btCancel);

@@ -26,7 +26,7 @@ namespace Client
         private int coin = 0;
 
         bool isTransering = false;
-
+        private String strTransferPath = "";
         #region Initialize the client with own downloader
         public MainForm()
         {
@@ -52,11 +52,11 @@ namespace Client
                 // Create the main client
                 tcpClient.ConnectToServer(ip, port);
 
-                // Create the downloader
-                InitDownloader();
-
                 Thread t = new Thread(Listener);
                 t.Start();
+
+                // Create the downloader
+                InitDownloader();
             }
             catch
             {
@@ -251,10 +251,30 @@ namespace Client
 
                         MessageBox.Show("Payment is succssful! The download is in background!");
                     }
-                    else if (temp[1] == "NOTNOUGH")
+                    else if (temp[1] == "NOTENOUGH")
                     {
                         MessageBox.Show("The current coin is not enough to run this process!");
                     }
+                    break;
+                case "TRANSFER":
+                    if (temp[1] == "CHECK")
+                    {
+                        // If the server dont have that book
+
+                        // If the server had
+                        if (temp[2] == "HAD")
+                            MessageBox.Show("This book had exsisted in the server!");
+                        else if (temp[2] == "NOT")
+                        {
+                            tcpClient.Send_Data("TRANSFER|SEND");
+                            Downloader_SendingFile(strTransferPath, temp[3]);
+                        }                            
+                    }
+                    else if (temp[1] == "SEND")
+                    {
+
+                    }
+
                     break;
                 default:
                     // SPECIAL CASE: file is sending
@@ -328,8 +348,9 @@ namespace Client
             }
         }
 
-        private void Downloader_SendingFile(String pathFile, String bookname, int index)
+        private void Downloader_SendingFile(String pathFile, String bookname)
         {
+            Thread.Sleep(500);
             // Send the start signal
             tcpDownloader.Send_Data("Start");
 
@@ -458,12 +479,18 @@ namespace Client
 
         private void btBookPay_Click(object sender, EventArgs e)
         {
-            TransferForm tffrm = new TransferForm();
+            // Load file that want to transfer to server
+            OpenFileDialog ofd = new OpenFileDialog();
 
-            tffrm.StartPosition = FormStartPosition.CenterParent;
-            tffrm.ShowDialog();
+            ofd.Multiselect = false;
 
-            tcpClient.Send_Data("TRANSFER|" + tffrm.dataStr);
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                strTransferPath = ofd.FileName;
+                FileInfo file = new FileInfo(ofd.FileName);
+
+                tcpClient.Send_Data("TRANSFER|CHECK|" + file.Name);
+            }            
         }
 
         private void btGoLib_Click(object sender, EventArgs e)
@@ -503,7 +530,7 @@ namespace Client
 
         private void btLogout_Click(object sender, EventArgs e)
         {
-
+            RunLoginForm();
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)

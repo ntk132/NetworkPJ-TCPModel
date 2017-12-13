@@ -14,6 +14,7 @@ namespace Server
     {
         private TcpListener server;
         private Socket[] socket = new Socket[10];
+        private NetworkStream[] networkStream = new NetworkStream[10];
         private IPAddress ipAd;
         private int port;
         public int counter = 0;
@@ -41,6 +42,16 @@ namespace Server
             {
                 // Set connection to client
                 socket[counter] = server.AcceptSocket();
+                
+                try
+                {
+                    networkStream[counter] = new NetworkStream(socket[counter], true);
+                }
+                catch
+                {
+                    networkStream[counter] = new NetworkStream(socket[counter]);
+                }
+
                 // get ip of client which've just connected to server
                 String str = socket[counter].RemoteEndPoint.ToString();
                 str += " is connected." + Environment.NewLine;
@@ -89,6 +100,12 @@ namespace Server
 
         public void SendFile(String pathFile, int index)
         {
+            /*
+            byte[] outFile = File.ReadAllBytes(pathFile);
+
+            socket[index].SendFile(pathFile);
+            */
+            
             byte[] outFile = File.ReadAllBytes(pathFile);
 
             /*
@@ -96,57 +113,100 @@ namespace Server
             {
                 ns.Write(outFile, 0, outFile.Length);
                 ns.Flush();
-            }
-            */
 
-            /*
-            try
-            {
-                socket[index].SendFile(pathFile, null, null, TransmitFileOptions.Disconnect);
-            }
-            catch
-            {
-                socket[index].SendFile(pathFile, null, null, TransmitFileOptions.ReuseSocket);
+                ns.Close();
             }
             */
-            socket[index].SendFile(pathFile);
             
-            //socket[index].SendFile(pathFile, null, null, TransmitFileOptions.UseDefaultWorkerThread);
-            //socket[index].SendFile(null, null, null, TransmitFileOptions.ReuseSocket);
-            //socket[index].Send(outFile);
+            networkStream[index].Write(outFile, 0, outFile.Length);
+            networkStream[index].Flush();
         }
 
         public int ReceiveFile(String savePath, int index)
         {
+            /*
+            int thisRead = 0;
+            int blockSize = 1024;
+            Byte[] dataByte = new Byte[blockSize];
+            Byte[] buff = new Byte[blockSize];
+
+            var ms = new MemoryStream();
+
+            try
+            {
+                
+                while (true)
+                {
+                    thisRead = socket[index].Receive(dataByte);
+                    if (thisRead == 0 || buff == dataByte) break;
+                    ms.Write(dataByte, 0, thisRead);
+                    buff = dataByte;
+                }
+                
+                File.WriteAllBytes(savePath, ms.ToArray());
+
+                return 1;
+            }
+            catch
+            {
+                return -1;
+            }
+            */
+            
             int thisRead = 0;
             int blockSize = 1024;
             Byte[] dataByte = new Byte[blockSize];
             var ms = new MemoryStream();
 
+            /*
             using (NetworkStream ns = new NetworkStream(socket[index]))
             {
                 try
                 {
                     while (true)
                     {
-                        //thisRead = ns.Read(dataByte, 0, blockSize);
-                        thisRead = socket[index].Receive(dataByte, 0, blockSize, SocketFlags.None);
+                        if (!ns.DataAvailable)
+                            break;
+
+                        thisRead = ns.Read(dataByte, 0, blockSize);
                         if (thisRead == 0) break;
                         ms.Write(dataByte, 0, thisRead);
                     }
 
                     File.WriteAllBytes(savePath, ms.ToArray());
 
-                    //ns.Close();
+                    ns.Close();
 
                     return 1;
                 }
                 catch
                 {
-                    //ns.Close();
+                    ns.Close();
 
                     return -1;
                 }
+            }
+            */
+
+            try
+            {
+                while (true)
+                {
+                    if (!networkStream[index].DataAvailable)
+                        break;
+
+                    thisRead = networkStream[index].Read(dataByte, 0, blockSize);
+                    if (thisRead == 0) break;
+                    ms.Write(dataByte, 0, thisRead);
+                }
+
+                File.WriteAllBytes(savePath, ms.ToArray());
+
+                return 1;
+            }
+            catch
+            {
+                return -1;
             }
         }
 

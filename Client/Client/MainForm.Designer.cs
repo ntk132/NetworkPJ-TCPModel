@@ -101,62 +101,80 @@
             // 
             // btLogout
             // 
+            this.btLogout.BackColor = System.Drawing.Color.Gainsboro;
+            this.btLogout.FlatAppearance.BorderSize = 0;
+            this.btLogout.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btLogout.Location = new System.Drawing.Point(0, 361);
             this.btLogout.Name = "btLogout";
             this.btLogout.Size = new System.Drawing.Size(100, 50);
             this.btLogout.TabIndex = 5;
             this.btLogout.Text = "Logout";
-            this.btLogout.UseVisualStyleBackColor = true;
+            this.btLogout.UseVisualStyleBackColor = false;
             this.btLogout.Click += new System.EventHandler(this.btLogout_Click);
             // 
             // btRegisAcc
             // 
+            this.btRegisAcc.BackColor = System.Drawing.Color.Gainsboro;
+            this.btRegisAcc.FlatAppearance.BorderSize = 0;
+            this.btRegisAcc.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btRegisAcc.Location = new System.Drawing.Point(0, 305);
             this.btRegisAcc.Name = "btRegisAcc";
             this.btRegisAcc.Size = new System.Drawing.Size(100, 50);
             this.btRegisAcc.TabIndex = 4;
             this.btRegisAcc.Text = "Regis other Account";
-            this.btRegisAcc.UseVisualStyleBackColor = true;
+            this.btRegisAcc.UseVisualStyleBackColor = false;
             this.btRegisAcc.Click += new System.EventHandler(this.btRegisAcc_Click);
             // 
             // btGoLib
             // 
+            this.btGoLib.BackColor = System.Drawing.Color.Gainsboro;
+            this.btGoLib.FlatAppearance.BorderSize = 0;
+            this.btGoLib.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btGoLib.Location = new System.Drawing.Point(0, 249);
             this.btGoLib.Name = "btGoLib";
             this.btGoLib.Size = new System.Drawing.Size(100, 50);
             this.btGoLib.TabIndex = 3;
             this.btGoLib.Text = "Go to My Library";
-            this.btGoLib.UseVisualStyleBackColor = true;
+            this.btGoLib.UseVisualStyleBackColor = false;
             this.btGoLib.Click += new System.EventHandler(this.btGoLib_Click);
             // 
             // btBookPay
             // 
+            this.btBookPay.BackColor = System.Drawing.Color.Gainsboro;
+            this.btBookPay.FlatAppearance.BorderSize = 0;
+            this.btBookPay.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btBookPay.Location = new System.Drawing.Point(0, 193);
             this.btBookPay.Name = "btBookPay";
             this.btBookPay.Size = new System.Drawing.Size(100, 50);
             this.btBookPay.TabIndex = 2;
             this.btBookPay.Text = "Transfer new book";
-            this.btBookPay.UseVisualStyleBackColor = true;
+            this.btBookPay.UseVisualStyleBackColor = false;
             this.btBookPay.Click += new System.EventHandler(this.btBookPay_Click);
             // 
             // btUpCoin
             // 
+            this.btUpCoin.BackColor = System.Drawing.Color.Gainsboro;
+            this.btUpCoin.FlatAppearance.BorderSize = 0;
+            this.btUpCoin.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btUpCoin.Location = new System.Drawing.Point(0, 137);
             this.btUpCoin.Name = "btUpCoin";
             this.btUpCoin.Size = new System.Drawing.Size(100, 50);
             this.btUpCoin.TabIndex = 1;
             this.btUpCoin.Text = "Up Coin";
-            this.btUpCoin.UseVisualStyleBackColor = true;
+            this.btUpCoin.UseVisualStyleBackColor = false;
             this.btUpCoin.Click += new System.EventHandler(this.btUpCoin_Click);
             // 
             // btAbout
             // 
+            this.btAbout.BackColor = System.Drawing.Color.Gainsboro;
+            this.btAbout.FlatAppearance.BorderSize = 0;
+            this.btAbout.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btAbout.Location = new System.Drawing.Point(0, 81);
             this.btAbout.Name = "btAbout";
             this.btAbout.Size = new System.Drawing.Size(100, 50);
             this.btAbout.TabIndex = 0;
             this.btAbout.Text = "About Account";
-            this.btAbout.UseVisualStyleBackColor = true;
+            this.btAbout.UseVisualStyleBackColor = false;
             this.btAbout.Click += new System.EventHandler(this.btAbout_Click);
             // 
             // pnResult

@@ -9,6 +9,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
 /****************************************************************************************************
     
     Project the online library. Using TCP client-server model
@@ -107,6 +109,7 @@ namespace Server
         }
         #endregion
 
+        #region Control the connection to the server
         private void SetConnection(object obj)
         {
             while (true)
@@ -137,6 +140,7 @@ namespace Server
                 }
             }
         }
+        #endregion
 
         /**********************************************************************************************/
         /********  ********  *********  ********/
@@ -198,6 +202,27 @@ namespace Server
                     else if (temp[1] == "COIN")
                     {
                         PayCoinToDownloadBook(temp[2], temp[3], index);
+                    }
+
+                    break;
+                case "TRANSFER":
+                    if (temp[1] == "CHECK")
+                    {
+                        String dataOut = "TRANSFER|CHECK|";
+                        if (CheckBookInDB(temp[2]))
+                        {
+                            dataOut += "HAD";
+                            tcpServer.SendDataToClient(dataOut, index);
+                        }
+                        else
+                        {
+                            dataOut += "NOT|" + temp[2];
+                            tcpServer.SendDataToClient(dataOut, index);
+                        }
+                    }
+                    else if (temp[1] == "SEND")
+                    {
+                        MessageBox.Show("Successfully! Transfering in the backdround.");
                     }
 
                     break;
@@ -314,6 +339,32 @@ namespace Server
         // then return the result to the client
         private void SearchBookNameAndSendResult(String keyword, int index)
         {
+            /*
+            String key1 = keyword;
+            String key2 = ConvertAllToUpper(keyword);
+            String key3 = ConvertAllToLower(keyword);
+            String key4 = ConvertStringToUpperFirstChar(keyword);
+            int r1 =  ProcessSearchingInDB(key1, index);
+            int r2 = ProcessSearchingInDB(key2, index);
+            int r3 = ProcessSearchingInDB(key3, index);
+            int r4 = ProcessSearchingInDB(key4, index);
+
+            if ((r1 + r2 + r3 + r4) == 0)
+                tcpServer.SendDataToClient("SEARCH|ERROR|No item found out!", index);
+            */
+
+            String[] key = new String[4];
+            key[0] = keyword;
+            key[1] = ConvertAllToUpper(keyword);
+            key[2] = ConvertAllToLower(keyword);
+            key[3] = ConvertStringToUpperFirstChar(keyword);
+
+            if (ProcessSearchingInDB(key, index) == 0)
+                tcpServer.SendDataToClient("SEARCH|ERROR|No item found out!", index);
+        }
+
+        private int ProcessSearchingInDB(String keyword, int index)
+        {
             bool isHavingBook = false;
 
             foreach (String item in dataBookNameList)
@@ -331,9 +382,92 @@ namespace Server
             }
 
             if (isHavingBook == false)
+                return 0;
+            else
+                return 1;
+        }
+
+        // Ver 2
+        private int ProcessSearchingInDB(String[] keyword, int index)
+        {
+            bool isHavingBook = false;
+
+            foreach (String item in dataBookNameList)
             {
-                tcpServer.SendDataToClient("SEARCH|ERROR|No item found out!", index);
+                for (int i = 0; i < keyword.Length; i++)
+                {
+                    int t = item.IndexOf(keyword[i]);
+
+                    // Found out the result
+                    if (t >= 0)
+                    {
+                        Thread.Sleep(5);
+
+                        // Send result to The client
+                        tcpServer.SendDataToClient("SEARCH|ADD|" + item + "|Free|5", index);
+
+                        isHavingBook = true;
+
+                        // Go to next item(Book name) in DB
+                        break;
+                    }
+                }                
             }
+
+            if (isHavingBook == false)
+                return 0;
+            else
+                return 1;
+        }
+
+        private string ConvertAllToUpper(String inStr)
+        {
+            char[] temp = inStr.ToCharArray();
+
+            for (int i = 0; i < inStr.Length; i++)
+            {
+                if (!Char.IsUpper(temp[i]))
+                    temp[i] = Char.ToUpper(temp[i]);
+            }
+
+            return new string(temp);
+        }
+
+        private string ConvertAllToLower(String inStr)
+        {
+            char[] temp = inStr.ToCharArray();
+
+            for (int i = 0; i < inStr.Length; i++)
+            {
+                if (!Char.IsLower(temp[i]))
+                    temp[i] = Char.ToLower(temp[i]);
+            }
+
+            return new string(temp);
+        }
+
+        private string ConvertFirstCharToUpper(String inStr)
+        {
+            char[] temp = inStr.ToCharArray();
+
+            temp[0] = Char.ToUpper(temp[0]);
+
+            for (int i = 1; i < inStr.Length; i++)
+                temp[i] = Char.ToLower(temp[i]);
+
+            return new string(temp);
+        }
+
+        private string ConvertStringToUpperFirstChar(String inStr)
+        {
+            // Get each word from the string
+            String[] temp = inStr.Split(' ');
+
+            // Then convert each word to word with first char is uppered
+            foreach (String str in temp)
+                ConvertFirstCharToUpper(str);
+
+            return String.Join(" ", temp);
         }
         #endregion
 
@@ -526,20 +660,6 @@ namespace Server
         }
 #endregion
 
-        #region Sending file to the client
-        private void SendFileToClient(String bookname, int index)
-        {
-            // Send the start signal
-            //tcpServer.SendDataToClient("Start", index);
-
-            // Send the file (Download) to the client
-            tcpServer.SendFile(pathBookFolder + @"\" + bookname, index);
-
-            // Send the end signal or the last connected
-            //tcpServer.SendDataToClient("End", index);
-        }
-        #endregion
-
         
 
         /// <summary>
@@ -552,6 +672,21 @@ namespace Server
 
         }
 
+        #region Processing transfer book
+        private bool CheckBookInDB(String bookname)
+        {
+            foreach (String item in dataBookNameList)
+            {
+                if (item.IndexOf(bookname) >= 0)
+                    return true;
+            }
+
+            return false;
+        }
+
+        #endregion
+
+        #region Downloader programming
         /****************************************************************************************
          Download Server:
          - Create new TCP server service the download feature
@@ -602,7 +737,7 @@ namespace Server
                     {
                         filename = tcpDownloader.ReceiveData(obj);
 
-                        //MessageBox.Show(filename);
+                        MessageBox.Show(filename);
                         isTransering = true;
                         continue;
                     }
@@ -611,15 +746,14 @@ namespace Server
                 {
                     if (tcpDownloader.ReceiveFile(pathBookFolder + @"\" + filename, index) == 1)
                     {
-                        MessageBox.Show("Download successfully!");
-
-                        isTransering = false;
+                        MessageBox.Show("Download successfully!");                        
                     }
                     else
                     {
                         MessageBox.Show("Download Failed!");
                     }
 
+                    isTransering = false;
                 }
             }
         }
@@ -642,6 +776,56 @@ namespace Server
         /*****************************************************************************************
          End the programming of the downloader.
         ******************************************************************************************/
+        #endregion
+
+
+        #region Create trial file (pdf) from the source file
+        /**********************************************************************************************
+        
+        USING: iTextSharp.dll - NuGet package
+        SOURCE FROM THIS METHOD: https://www.codeproject.com/Articles/559380/Splitting-and-Merging-PDF-Files-in-Csharp-Using-iT 
+        
+        ************************************************************************************************/
+
+        public void ExtractPages(string sourcePdfPath, string outputPdfPath, int startPage, int endPage)
+        {
+            PdfReader reader = null;
+            Document sourceDocument = null;
+            PdfCopy pdfCopyProvider = null;
+            PdfImportedPage importedPage = null;
+
+            try
+            {
+                // Intialize a new PdfReader instance with the contents of the source Pdf file:
+                reader = new PdfReader(sourcePdfPath);
+
+                // For simplicity, I am assuming all the pages share the same size
+                // and rotation as the first page:
+                sourceDocument = new Document(reader.GetPageSizeWithRotation(startPage));
+
+                // Initialize an instance of the PdfCopyClass with the source 
+                // document and an output file stream:
+                pdfCopyProvider = new PdfCopy(sourceDocument,
+                    new System.IO.FileStream(outputPdfPath, System.IO.FileMode.Create));
+
+                sourceDocument.Open();
+
+                // Walk the specified range and add the page copies to the output file:
+                for (int i = startPage; i <= endPage; i++)
+                {
+                    importedPage = pdfCopyProvider.GetImportedPage(reader, i);
+                    pdfCopyProvider.AddPage(importedPage);
+                }
+                sourceDocument.Close();
+                reader.Close();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        #endregion
+
         private void btConnect_Click(object sender, EventArgs e)
         {
             try

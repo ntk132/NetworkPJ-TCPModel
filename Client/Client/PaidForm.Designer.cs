@@ -48,12 +48,15 @@
             // 
             // btPay
             // 
+            this.btPay.BackColor = System.Drawing.Color.LightGray;
+            this.btPay.FlatAppearance.BorderSize = 0;
+            this.btPay.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btPay.Location = new System.Drawing.Point(281, 104);
             this.btPay.Name = "btPay";
             this.btPay.Size = new System.Drawing.Size(75, 25);
             this.btPay.TabIndex = 10;
             this.btPay.Text = "Pay";
-            this.btPay.UseVisualStyleBackColor = true;
+            this.btPay.UseVisualStyleBackColor = false;
             this.btPay.Click += new System.EventHandler(this.btPay_Click);
             // 
             // tbBookname
@@ -92,6 +95,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(384, 151);
             this.Controls.Add(this.cbUTT);
             this.Controls.Add(this.btPay);
