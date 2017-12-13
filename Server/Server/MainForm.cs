@@ -39,6 +39,7 @@ namespace Server
         private String pathUserFile = @"D:\VS 2015\NetworkPJ\Server\Server\Data\User.txt";
         private String pathBookFolder = @"D:\VS 2015\NetworkPJ\Server\Server\Books";
         private String pathDownload = @"D:\VS 2015\NetworkPJ\Server\Server\Data\Download.txt";
+        private String pathTrial = @"D:\VS 2015\NetworkPJ\Server\Server\Trial";
 
         // Variables used for mapping data from DB
         List<String> dataUserFile;
@@ -208,17 +209,9 @@ namespace Server
                 case "TRANSFER":
                     if (temp[1] == "CHECK")
                     {
-                        String dataOut = "TRANSFER|CHECK|";
-                        if (CheckBookInDB(temp[2]))
-                        {
-                            dataOut += "HAD";
-                            tcpServer.SendDataToClient(dataOut, index);
-                        }
-                        else
-                        {
-                            dataOut += "NOT|" + temp[2];
-                            tcpServer.SendDataToClient(dataOut, index);
-                        }
+                        MessageBox.Show("Check:" + temp[2]);
+
+                        CheckBookInDB(temp[2], index);
                     }
                     else if (temp[1] == "SEND")
                     {
@@ -528,7 +521,7 @@ namespace Server
             // <username>|<password>|<coin>
 
             // 
-            UpdateUserInfoDB(dataUserFile, userConnected[index], null, value);
+            UpdateUserInfoDB(dataUserFile, userConnected[index], null, value, null);
 
             // Message the client that the update is succssful
             tcpServer.SendDataToClient(msg + "DONE", index);
@@ -548,22 +541,21 @@ namespace Server
         {
             String msg = "PAYMENT|";
             String pthFl = pathBookFolder + @"\" + bookname;
+
             // Update DB: user coin, download list
-            if (UpdateUserInfoDB(dataUserFile, userConnected[index], null, value))
+            if (UpdateUserInfoDB(dataUserFile, userConnected[index], null, value, null))
             {
                 // Enough coin to pay
                 // Payment processing is done
                 tcpServer.SendDataToClient(msg + "DONE|" + bookname, index);
 
                 /* Send book to client */
-                //SendFileToClient(bookname, index);
-                //tcpServer.SendFile(pathBookFolder + @"\" + bookname, index);
                 Downloader_SendingFile(pthFl, bookname, index);
 
                 // Update the DB
                 NewBookDownloaded(bookname, userConnected[index]);
 
-                // Mapping
+                // Update Mapping
                 dataDownload = LoadContentOfFile(pathDownload);
             }
             else
@@ -609,7 +601,7 @@ namespace Server
         /// <param name="acc">username</param>
         /// <param name="pass">password</param>
         /// <param name="value">coin value</param>
-        private bool UpdateUserInfoDB(List<String> file, String acc, String pass = null, String value = null)
+        private bool UpdateUserInfoDB(List<String> file, String acc, String pass = null, String coin = null, String turn = null)
         {
             foreach (String item in file)
             {
@@ -622,9 +614,9 @@ namespace Server
                         temp[1] = pass;
 
                     // update coin
-                    if (value != null)
+                    if (coin != null)
                     {
-                        int total = Convert.ToInt16(temp[2]) + Convert.ToInt16(value);
+                        int total = Convert.ToInt16(temp[2]) + Convert.ToInt16(coin);
 
                         // Not enough coin to pay
                         if (total < 0)
@@ -635,14 +627,25 @@ namespace Server
                         temp[2] = total.ToString();
                     }
 
+                    if (turn != null)
+                    {
+                        int total = Convert.ToInt16(temp[3]) + Convert.ToInt16(turn);
+
+                        // Not enough turn to pay
+                        if (total < 0)
+                        {
+                            return false;
+                        }
+
+                        temp[3] = total.ToString();
+                    }
+
                     // Update DB
-                    UpdateDB(pathUserFile, item, temp[0] + "|" + temp[1] + "|" + temp[2]);
+                    UpdateDB(pathUserFile, item, temp[0] + "|" + temp[1] + "|" + temp[2] + "|" + temp[3]);
 
                     break;
                 }                
             }
-
-
 
             return true;
         }
@@ -658,7 +661,7 @@ namespace Server
 
             LoadDB();
         }
-#endregion
+        #endregion
 
         
 
@@ -669,19 +672,52 @@ namespace Server
         /// <param name="index"></param>
         private void TransferBook(String bookname, int index)
         {
+            String msg = "PAYMENT|";
+            String pthFl = pathBookFolder + @"\" + bookname;
 
+            // Update DB: user coin, download list
+            if (UpdateUserInfoDB(dataUserFile, userConnected[index], null, null, "-1"))
+            {
+                // Enough coin to pay
+                // Payment processing is done
+                tcpServer.SendDataToClient(msg + "DONE|" + bookname, index);
+
+                /* Send book to client */
+                Downloader_SendingFile(pthFl, bookname, index);
+
+                // Update the DB
+                NewBookDownloaded(bookname, userConnected[index]);
+
+                // Update Mapping
+                dataDownload = LoadContentOfFile(pathDownload);
+            }
+            else
+            {
+                // If coin is not enough
+                // Message to the client
+                tcpServer.SendDataToClient(msg + "OUTTURN", index);
+            }
         }
 
         #region Processing transfer book
-        private bool CheckBookInDB(String bookname)
+        private void CheckBookInDB(String bookname, int index)
         {
+            String dataOut = "TRANSFER|CHECK|";
+            bool isExsist = false;
+
             foreach (String item in dataBookNameList)
             {
                 if (item.IndexOf(bookname) >= 0)
-                    return true;
+                {
+                    dataOut += "HAD";
+                    tcpServer.SendDataToClient(dataOut, index);
+
+                    return;
+                }
             }
 
-            return false;
+            dataOut += "NOT|" + bookname;
+            tcpServer.SendDataToClient(dataOut, index);
         }
 
         #endregion
@@ -726,6 +762,8 @@ namespace Server
         {
             int index = (int)obj;
             String filename = "";
+            bool isDone = false;
+
             while (true)
             {
                 if (!isTransering)
@@ -744,13 +782,25 @@ namespace Server
                 }
                 else
                 {
-                    if (tcpDownloader.ReceiveFile(pathBookFolder + @"\" + filename, index) == 1)
+                    String pathFileFull = pathBookFolder + @"\" + filename;
+                    String pathFileTrial = pathTrial + @"\" + filename; 
+                    if (tcpDownloader.ReceiveFile(pathFileFull, index) == 1)
                     {
-                        MessageBox.Show("Download successfully!");                        
+                        // Update info account
+                        UpdateUserInfoDB(dataUserFile, userConnected[index], null, null, "1");
+
+                        // Update DB and mapping string
+                        LoadDB();
+
+                        // Create the trial version of this book
+                        CreateTheTrialBook(pathFileFull, pathFileTrial);
+
+                        MessageBox.Show("Upload successfully!");
+                                               
                     }
                     else
                     {
-                        MessageBox.Show("Download Failed!");
+                        MessageBox.Show("Upload Failed!");
                     }
 
                     isTransering = false;
@@ -777,8 +827,7 @@ namespace Server
          End the programming of the downloader.
         ******************************************************************************************/
         #endregion
-
-
+            
         #region Create trial file (pdf) from the source file
         /**********************************************************************************************
         
@@ -818,6 +867,44 @@ namespace Server
                 }
                 sourceDocument.Close();
                 reader.Close();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        private void CreateTheTrialBook(string sourcePdfPath, string outputPdfPath)
+        {
+            PdfReader reader = null;
+
+            try
+            {
+                // 
+                reader = new PdfReader(sourcePdfPath);
+
+                // Count the number of pages of this book
+                int pageCount = reader.NumberOfPages;
+
+                /*
+                 OWNER RULE: CREATE THE TRIAL FILE (REVIEW BOOK)
+                 With the page of book if the number is:
+                 < 5   - the trial have 2 pages
+                 < 10  - the trial have 4 pages
+                 > 50 - the trial have 10 pages
+                */
+                if (pageCount <= 5)
+                {
+                    ExtractPages(sourcePdfPath, outputPdfPath, 1, 2);
+                }
+                else if (pageCount <= 10)
+                {
+                    ExtractPages(sourcePdfPath, outputPdfPath, 1, 4);
+                }
+                else if (pageCount >= 50)
+                {
+                    ExtractPages(sourcePdfPath, outputPdfPath, 1, 10);
+                }
             }
             catch (Exception ex)
             {

@@ -255,17 +255,24 @@ namespace Client
                     {
                         MessageBox.Show("The current coin is not enough to run this process!");
                     }
+                    else if (temp[1] == "OUTTURN")
+                    {
+                        MessageBox.Show("The turn transfer book is out! Cannot process this!");
+                    }
                     break;
                 case "TRANSFER":
                     if (temp[1] == "CHECK")
                     {
-                        // If the server dont have that book
-
                         // If the server had
                         if (temp[2] == "HAD")
+                        {
                             MessageBox.Show("This book had exsisted in the server!");
+                        }                            
                         else if (temp[2] == "NOT")
                         {
+                            // If the server dont have that book
+                            MessageBox.Show("Transfering...");
+
                             tcpClient.Send_Data("TRANSFER|SEND");
                             Downloader_SendingFile(strTransferPath, temp[3]);
                         }                            
@@ -351,17 +358,17 @@ namespace Client
         private void Downloader_SendingFile(String pathFile, String bookname)
         {
             Thread.Sleep(500);
+
             // Send the start signal
             tcpDownloader.Send_Data("Start");
 
             // Send the file
             tcpDownloader.Send_Data(bookname);
 
+            Thread.Sleep(250);
+
             // service only client
             tcpDownloader.SendFile(pathFile);
-
-            // Send the end signal
-            tcpDownloader.Send_Data("End");
         }
         /*****************************************************************************************
          END: the programming for the downloader
@@ -417,12 +424,14 @@ namespace Client
         {
             MessageBox.Show(path);
 
+            /*
             //PDFReader pr = new PDFReader(Path.Combine(pathDownload, path));
             //PDFReader pr = new PDFReader(pathDownload + @"\" + path);
 
             PDFReader pr = new PDFReader();
             pr.path = @"D:\VS 2015\NetworkPJ\Client\Client\Downloads\" + path;
             pr.Show();
+            */
         }
 
 
