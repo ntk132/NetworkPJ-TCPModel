@@ -24,7 +24,7 @@ namespace Client
         /// </summary>
         /// <param name="bookname">The name of book</param>
         /// <param name="value">The value of book (count by coin)</param>
-        public PaidForm(String bookname, String value, bool isUsedTransfer)
+        public PaidForm(String bookname, String value)
         {
             InitializeComponent();
 
@@ -32,7 +32,6 @@ namespace Client
 
             tbBookname.Text = bookname;
             tbBookValue.Text = value;
-            cbUTT.Checked = isUsedTransfer;
         }
 
         private void btPay_Click(object sender, EventArgs e)

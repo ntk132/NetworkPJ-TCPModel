@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -23,7 +24,6 @@ namespace Client
 
         /******** Information of this client ********/
         private String username = "";
-        private int coin = 0;
 
         bool isTransering = false;
         private String strTransferPath = "";
@@ -71,6 +71,7 @@ namespace Client
                 btBookPay.Enabled = false;
                 btRegisAcc.Enabled = false;
                 btUpCoin.Enabled = false;
+                btLogout.Enabled = false;
 
                 return;
             }
@@ -200,20 +201,8 @@ namespace Client
                         lvResult.Items.Add(temp[2]);
 
                         // call the function from other thread or process
-
                         // Create and add a book cart
-                        BookCart bc = new BookCart();
-                        bc.Title = temp[2];
-                        bc.State = temp[3];
-                        bc.Coin = temp[4];
-                        bc.Width = pnResult.Width;
-                        bc.Location = new Point(0, pnResultHeight);
-                        bc.Click += new EventHandler(BookCartItem_Click);
-                        pnResultHeight += bc.Height;
-
-                        pnResult.Invoke(new MethodInvoker( delegate {
-                                this.pnResult.Controls.Add(bc);
-                            }));                                                
+                        CreateBookCart(temp[2], temp[3], temp[4]);
                     }
                     else if (temp[1] == "ERROR")
                     {
@@ -284,12 +273,61 @@ namespace Client
 
                     break;
                 default:
-                    // SPECIAL CASE: file is sending
-
                     break;
             }
         }
 
+        #region Creating the book cart (Searching)
+        private void CreateBookCart(String title, String state, String coin)
+        {
+            // Create and add a book cart
+            BookCart bc = new BookCart();
+
+            bc.Title = title;
+            bc.State = state;
+            bc.Coin = coin;
+            bc.OnViewButtonClicked += new EventHandler(ButtonView_Click);
+            bc.OnDownloadButtonClicked += new EventHandler(ButtonDownload_Click);
+            bc.Width = pnResult.Width;
+            bc.Location = new Point(0, pnResultHeight);
+            //bc.Click += new EventHandler(BookCartItem_Click);
+            pnResultHeight += bc.Height;
+
+            pnResult.Invoke(new MethodInvoker(delegate {
+                this.pnResult.Controls.Add(bc);
+            }));
+        }
+
+        private void ButtonView_Click(object sender, EventArgs e)
+        {
+            /* Test data flow instrument */
+            MessageBox.Show("View button!");
+
+            // Find book in the local place
+
+            // If not, view on the server(trial)
+
+        }
+
+        private void ButtonDownload_Click(object sender, EventArgs e)
+        {
+            /* Test data flow instrument */
+            //MessageBox.Show("Download button");
+
+            // Get the oject(BookCart) of this function
+            BookCart bc = (BookCart)sender;
+
+            // Mapping properties
+            // Send to confim form to make sure the user really want this one
+            PaidForm pfrm = new PaidForm(bc.Title, bc.Coin);
+            pfrm.StartPosition = FormStartPosition.CenterParent;
+
+            if (pfrm.ShowDialog() == DialogResult.OK)
+            {
+                tcpClient.Send_Data("PAYMENT|" + pfrm.dataStr);
+            }            
+        }
+        #endregion
 
         #region Downloader programming section
         /*****************************************************************************************
@@ -301,11 +339,12 @@ namespace Client
         {
             try
             {
-                // get ip address
+                // Get ip address
                 String ip = "127.0.100.6";
-                // get port number
+                // Get port number
                 int port = 6066;
 
+                // Create the downloader
                 tcpDownloader.ConnectToServer(ip, port);
 
                 Thread t = new Thread(DownloaderListener);
@@ -313,16 +352,15 @@ namespace Client
             }
             catch
             {
-                // if connecting is failed the turn on the offline mode
-
                 return;
             }
         }
 
-        // this methos always listen any message from server
+        // This method always listen any message from server
         private void DownloaderListener(object obj)
         {
             String filename = "";
+
             while (true)
             {
                 if (!isTransering)
@@ -334,7 +372,8 @@ namespace Client
                     {
                         filename = tcpDownloader.Receive_Data(obj);
 
-                        MessageBox.Show(filename);
+                        /* Test data flow instrument */
+                        //MessageBox.Show(filename);
                         isTransering = true;
                         continue;
                     }
@@ -406,32 +445,37 @@ namespace Client
             {
                 try
                 {
-                    // Send the book's name to server
-                    tcpClient.Send_Data("VIEW|" + lvResult.SelectedItems[0].Text);
-                }
-                catch
-                {
+                    /* Test data flow instrument */
+                    //MessageBox.Show("Open file!");
+
                     // Exception: this client in offline mode
                     // Can just open book local
                     OpenFile(lvResult.SelectedItems[0].Text);
-                }               
+                }
+                catch
+                {
+                    /* Test data flow instrument */
+                    //MessageBox.Show("Send!");
 
+                    // Send the book's name to server                    
+                    tcpClient.Send_Data("VIEW|" + lvResult.SelectedItems[0].Text);
+                }
             }
         }
 
         /******** This function process the openning book ********/
         private void OpenFile(String path)
         {
-            MessageBox.Show(path);
+            //MessageBox.Show(path);
 
-            /*
-            //PDFReader pr = new PDFReader(Path.Combine(pathDownload, path));
-            //PDFReader pr = new PDFReader(pathDownload + @"\" + path);
-
-            PDFReader pr = new PDFReader();
-            pr.path = @"D:\VS 2015\NetworkPJ\Client\Client\Downloads\" + path;
-            pr.Show();
-            */
+            try
+            {
+                Process.Start(pathDownload + @"\" + path);
+            }
+            catch
+            {
+                MessageBox.Show("Cannot open: " + path);
+            }
         }
 
 
@@ -447,7 +491,7 @@ namespace Client
 
             // Mapping properties
             // Send to confim form to make sure the user really want this one
-            PaidForm pfrm = new PaidForm(bc.Title, bc.Coin, bc.UseTransfer_Checked);
+            PaidForm pfrm = new PaidForm(bc.Title, bc.Coin);
             pfrm.StartPosition = FormStartPosition.CenterParent;
             if (pfrm.ShowDialog() == DialogResult.OK)
             {
@@ -531,6 +575,7 @@ namespace Client
             RegisForm rfrm = new RegisForm();
 
             rfrm.StartPosition = FormStartPosition.CenterParent;
+
             if (rfrm.ShowDialog() == DialogResult.OK)
             {
                 tcpClient.Send_Data("REGIS|" + rfrm.regisData);
@@ -539,6 +584,9 @@ namespace Client
 
         private void btLogout_Click(object sender, EventArgs e)
         {
+            // Disconnect to the server
+
+            // Show login form
             RunLoginForm();
         }
 

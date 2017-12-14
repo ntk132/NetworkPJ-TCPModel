@@ -73,6 +73,11 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="RegisForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -100,13 +105,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
     <EmbeddedResource Include="RegisForm.resx">
       <DependentUpon>RegisForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -147,6 +148,33 @@
       <WrapperTool>aximp</WrapperTool>
       <Isolated>False</Isolated>
     </COMReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\book.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\book1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\download.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\add-user.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\books.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\coin.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\information.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\logout.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\upload.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

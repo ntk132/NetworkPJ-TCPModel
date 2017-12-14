@@ -15,7 +15,17 @@ namespace Client
         private String title;
         private String state;
         private String coin;
-        private bool use_trans;
+        public Button btnView;
+        public Button btnDownload;
+
+        /*
+        public delegate void ButtonClickedEventHandler(object sender, EventArgs e);
+        public event ButtonClickedEventHandler OnViewButtonClicked;
+        public event ButtonClickedEventHandler OnDownloadButtonClicked;
+        */
+
+        public event EventHandler OnViewButtonClicked;
+        public event EventHandler OnDownloadButtonClicked;
 
         public String Title
         {
@@ -35,10 +45,16 @@ namespace Client
             set { coin = value; }
         }
 
-        public bool UseTransfer_Checked
+        public Button ButtonView
         {
-            get { return use_trans; }
-            set { use_trans = value; }
+            get { return btnView; }
+            set { btnView = value; }
+        }
+
+        public Button ButtonDownload
+        {
+            get { return btnDownload; }
+            set { btnDownload = value; }
         }
 
         public BookCart()
@@ -48,12 +64,11 @@ namespace Client
             title = "<Unknow>";
             state = "<Unknow>";
             coin = "0";
-            use_trans = false;
         }
 
         private void BookCart_MouseHover(object sender, EventArgs e)
         {
-            this.BackColor = Color.WhiteSmoke;
+            this.BackColor = Color.Silver;
         }
 
         private void BookCart_MouseLeave(object sender, EventArgs e)
@@ -66,7 +81,26 @@ namespace Client
             lbTitle.Text = title;
             lbState.Text = state;
             lbValue.Text = coin;
-            cbUT.Checked = use_trans;
+
+            /*
+            btView = btnView;
+            btDownload = btnDownload;
+            */
+
+            btView.Click += new EventHandler(OnButtonViewClicked);
+            btDownload.Click += new EventHandler(OnButtonDownloadClicked);
+        }
+
+        private void OnButtonViewClicked(object sender, EventArgs e)
+        {
+            if (OnViewButtonClicked != null)
+                OnViewButtonClicked(this, e);
+        }
+
+        private void OnButtonDownloadClicked(object sender, EventArgs e)
+        {
+            if (OnDownloadButtonClicked != null)
+                OnDownloadButtonClicked(this, e);
         }
     }
 }

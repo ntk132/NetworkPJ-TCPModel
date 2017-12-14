@@ -31,7 +31,8 @@
             this.lbTitle = new System.Windows.Forms.Label();
             this.lbState = new System.Windows.Forms.Label();
             this.lbValue = new System.Windows.Forms.Label();
-            this.cbUT = new System.Windows.Forms.CheckBox();
+            this.btDownload = new System.Windows.Forms.Button();
+            this.btView = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // lbTitle
@@ -47,6 +48,8 @@
             // 
             // lbState
             // 
+            this.lbState.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
             this.lbState.AutoSize = true;
             this.lbState.Font = new System.Drawing.Font("Century Gothic", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lbState.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
@@ -58,6 +61,7 @@
             // 
             // lbValue
             // 
+            this.lbValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.lbValue.AutoSize = true;
             this.lbValue.ForeColor = System.Drawing.SystemColors.ControlDark;
             this.lbValue.Location = new System.Drawing.Point(26, 70);
@@ -66,30 +70,46 @@
             this.lbValue.TabIndex = 2;
             this.lbValue.Text = "Value: 0 Coin";
             // 
-            // cbUT
+            // btDownload
             // 
-            this.cbUT.AutoSize = true;
-            this.cbUT.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(64)))), ((int)(((byte)(64)))));
-            this.cbUT.Location = new System.Drawing.Point(225, 69);
-            this.cbUT.Name = "cbUT";
-            this.cbUT.Size = new System.Drawing.Size(99, 21);
-            this.cbUT.TabIndex = 3;
-            this.cbUT.Text = "Use Transfer";
-            this.cbUT.UseVisualStyleBackColor = true;
+            this.btDownload.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.btDownload.FlatAppearance.BorderSize = 0;
+            this.btDownload.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btDownload.Image = global::Client.Properties.Resources.download;
+            this.btDownload.Location = new System.Drawing.Point(375, 0);
+            this.btDownload.Name = "btDownload";
+            this.btDownload.Size = new System.Drawing.Size(75, 100);
+            this.btDownload.TabIndex = 4;
+            this.btDownload.UseVisualStyleBackColor = true;
+            // 
+            // btView
+            // 
+            this.btView.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.btView.FlatAppearance.BorderSize = 0;
+            this.btView.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btView.Image = global::Client.Properties.Resources.book;
+            this.btView.Location = new System.Drawing.Point(300, 0);
+            this.btView.Name = "btView";
+            this.btView.Size = new System.Drawing.Size(75, 100);
+            this.btView.TabIndex = 3;
+            this.btView.UseVisualStyleBackColor = true;
             // 
             // BookCart
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
-            this.Controls.Add(this.cbUT);
+            this.Controls.Add(this.btDownload);
+            this.Controls.Add(this.btView);
             this.Controls.Add(this.lbValue);
             this.Controls.Add(this.lbState);
             this.Controls.Add(this.lbTitle);
             this.Font = new System.Drawing.Font("Century Gothic", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "BookCart";
-            this.Size = new System.Drawing.Size(350, 100);
+            this.Size = new System.Drawing.Size(450, 100);
             this.Load += new System.EventHandler(this.BookCart_Load);
             this.MouseLeave += new System.EventHandler(this.BookCart_MouseLeave);
             this.MouseHover += new System.EventHandler(this.BookCart_MouseHover);
@@ -103,6 +123,7 @@
         private System.Windows.Forms.Label lbTitle;
         private System.Windows.Forms.Label lbState;
         private System.Windows.Forms.Label lbValue;
-        private System.Windows.Forms.CheckBox cbUT;
+        private System.Windows.Forms.Button btView;
+        private System.Windows.Forms.Button btDownload;
     }
 }
