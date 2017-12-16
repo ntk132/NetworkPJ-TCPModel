@@ -21,7 +21,7 @@ namespace Client
         {
             // Create client
             tcp = new TcpClient();
-            
+
             // start connection
             tcp.Connect(ip, port);
             // set stream for this client
@@ -86,84 +86,19 @@ namespace Client
         public void SendFile(String pathFile)
         {
             byte[] outFile = File.ReadAllBytes(pathFile);
-            /*
-            using (NetworkStream ns = tcp.GetStream())
-            {
-                //ns.Write(outFile, 0, outFile.Length);
-                //ns.Flush();                
-            }
-            */
-            /*
-            stm.Write(outFile, 0, outFile.Length);
-            stm.Flush();
-            */
+
             networkStream.Write(outFile, 0, outFile.Length);
             networkStream.Flush();
         }
 
         public int ReceiveFile(String savePath)
         {
-            /*
-            int thisRead = 0;
-            int blockSize = 1024;
-            Byte[] dataByte = new Byte[blockSize];
-            Byte[] buff = new Byte[blockSize];
-
-            var ms = new MemoryStream();
-            try
-            {
-                while (true)
-                {
-                    thisRead = stm.Read(dataByte, 0, blockSize);
-                    if (thisRead == 0 || dataByte == buff ||  dataByte.Length == buff.Length) break;
-                    ms.Write(dataByte, 0, thisRead);
-                    buff = dataByte;
-                }
-
-                File.WriteAllBytes(savePath, ms.ToArray());
-
-                return 1;
-            }
-            catch
-            {
-                return -1;
-            }
-            */
-            
             int thisRead = 0;
             int blockSize = 1024;
             Byte[] dataByte = new Byte[blockSize];
 
             var ms = new MemoryStream();
 
-            /*
-            using (NetworkStream ns = tcp.GetStream())
-            {
-                try
-                {
-                    while (true)
-                    {
-                        if (!ns.DataAvailable)
-                            break;
-
-                        thisRead = ns.Read(dataByte, 0, blockSize);
-                        ms.Write(dataByte, 0, thisRead);
-                    }
-
-                    File.WriteAllBytes(savePath, ms.ToArray());
-
-                    ns.Close();
-
-                    return 1;
-                }
-                catch
-                {
-                    ns.Close();
-
-                    return -1;
-                }
-            }
-            */
             try
             {
                 while (true)
@@ -180,6 +115,56 @@ namespace Client
                 return 1;
             }
             catch
+            {
+                return -1;
+            }
+        }
+
+        public int Send_File(String pathFile)
+        {
+            // Examples for CanWrite, and CanWrite  
+
+            // Check to see if this NetworkStream is writable.
+            if (networkStream.CanWrite)
+            {
+                byte[] outFile = File.ReadAllBytes(pathFile);
+
+                networkStream.Write(outFile, 0, outFile.Length);
+                networkStream.Flush();
+
+                return 1;
+            }
+            else
+            {
+                return -1;
+            }
+        }
+
+        public int Receive_File(String savePath)
+        {
+            int thisRead = 0;
+            int blockSize = 1024;
+            Byte[] dataByte = new Byte[blockSize];
+            var ms = new MemoryStream();
+
+            // Examples for CanRead, Read, and DataAvailable.
+
+            // Check to see if this NetworkStream is readable.
+            if (networkStream.CanRead)
+            {
+                // Incoming message may be larger than the buffer size.
+                do
+                {
+                    thisRead = networkStream.Read(dataByte, 0, blockSize);
+                    ms.Write(dataByte, 0, thisRead);
+                }
+                while (networkStream.DataAvailable);
+
+                File.WriteAllBytes(savePath, ms.ToArray());
+
+                return 1;
+            }
+            else
             {
                 return -1;
             }

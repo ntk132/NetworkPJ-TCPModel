@@ -42,7 +42,7 @@ namespace Server
             {
                 // Set connection to client
                 socket[counter] = server.AcceptSocket();
-                
+
                 try
                 {
                     networkStream[counter] = new NetworkStream(socket[counter], true);
@@ -100,93 +100,18 @@ namespace Server
 
         public void SendFile(String pathFile, int index)
         {
-            /*
             byte[] outFile = File.ReadAllBytes(pathFile);
 
-            socket[index].SendFile(pathFile);
-            */
-            
-            byte[] outFile = File.ReadAllBytes(pathFile);
-
-            /*
-            using (NetworkStream ns = new NetworkStream(socket[index]))
-            {
-                ns.Write(outFile, 0, outFile.Length);
-                ns.Flush();
-
-                ns.Close();
-            }
-            */
-            
             networkStream[index].Write(outFile, 0, outFile.Length);
             networkStream[index].Flush();
         }
 
         public int ReceiveFile(String savePath, int index)
         {
-            /*
-            int thisRead = 0;
-            int blockSize = 1024;
-            Byte[] dataByte = new Byte[blockSize];
-            Byte[] buff = new Byte[blockSize];
-
-            var ms = new MemoryStream();
-
-            try
-            {
-                
-                while (true)
-                {
-                    thisRead = socket[index].Receive(dataByte);
-                    if (thisRead == 0 || buff == dataByte) break;
-                    ms.Write(dataByte, 0, thisRead);
-                    buff = dataByte;
-                }
-                
-                File.WriteAllBytes(savePath, ms.ToArray());
-
-                return 1;
-            }
-            catch
-            {
-                return -1;
-            }
-            */
-            
             int thisRead = 0;
             int blockSize = 1024;
             Byte[] dataByte = new Byte[blockSize];
             var ms = new MemoryStream();
-
-            /*
-            using (NetworkStream ns = new NetworkStream(socket[index]))
-            {
-                try
-                {
-                    while (true)
-                    {
-                        if (!ns.DataAvailable)
-                            break;
-
-                        thisRead = ns.Read(dataByte, 0, blockSize);
-                        if (thisRead == 0) break;
-                        ms.Write(dataByte, 0, thisRead);
-                    }
-
-                    File.WriteAllBytes(savePath, ms.ToArray());
-
-                    ns.Close();
-
-                    return 1;
-                }
-                catch
-                {
-                    ns.Close();
-
-                    return -1;
-                }
-            }
-            */
 
             try
             {
@@ -205,6 +130,56 @@ namespace Server
                 return 1;
             }
             catch
+            {
+                return -1;
+            }
+        }
+
+        public int Send_File(String pathFile, int index)
+        {
+            // Examples for CanWrite, and CanWrite  
+
+            // Check to see if this NetworkStream is writable.
+            if (networkStream[index].CanWrite)
+            {
+                byte[] outFile = File.ReadAllBytes(pathFile);
+
+                networkStream[index].Write(outFile, 0, outFile.Length);
+                networkStream[index].Flush();
+
+                return 1;
+            }
+            else
+            {
+                return -1;
+            }
+        }
+
+        public int Receive_File(String savePath, int index)
+        {
+            int thisRead = 0;
+            int blockSize = 1024;
+            Byte[] dataByte = new Byte[blockSize];
+            var ms = new MemoryStream();
+
+            // Examples for CanRead, Read, and DataAvailable.
+
+            // Check to see if this NetworkStream is readable.
+            if (networkStream[index].CanRead)
+            {
+                // Incoming message may be larger than the buffer size.
+                do
+                {
+                    thisRead = networkStream[index].Read(dataByte, 0, blockSize);
+                    ms.Write(dataByte, 0, thisRead);
+                }
+                while (networkStream[index].DataAvailable);
+
+                File.WriteAllBytes(savePath, ms.ToArray());
+
+                return 1;
+            }
+            else
             {
                 return -1;
             }

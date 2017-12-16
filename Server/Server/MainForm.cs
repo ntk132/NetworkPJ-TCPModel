@@ -219,6 +219,9 @@ namespace Server
                     }
 
                     break;
+                case "ABOUT":
+                    Get_Info_Acc(temp[1], index);
+                    break;
                 default:
                     break;
             }
@@ -394,10 +397,14 @@ namespace Server
                     // Found out the result
                     if (t >= 0)
                     {
-                        Thread.Sleep(5);
+                        // Problem in the result,
+                        // the clent may receive that 5SEARCH in the value,
+                        // so that set the delay to decrease the problem
+                        Thread.Sleep(50);
 
+                        String data = "SEARCH|ADD|" + item + "|Free|5";
                         // Send result to The client
-                        tcpServer.SendDataToClient("SEARCH|ADD|" + item + "|Free|5", index);
+                        tcpServer.SendDataToClient( data, index);
 
                         isHavingBook = true;
 
@@ -703,7 +710,6 @@ namespace Server
         private void CheckBookInDB(String bookname, int index)
         {
             String dataOut = "TRANSFER|CHECK|";
-            bool isExsist = false;
 
             foreach (String item in dataBookNameList)
             {
@@ -762,7 +768,6 @@ namespace Server
         {
             int index = (int)obj;
             String filename = "";
-            bool isDone = false;
 
             while (true)
             {
@@ -784,7 +789,7 @@ namespace Server
                 {
                     String pathFileFull = pathBookFolder + @"\" + filename;
                     String pathFileTrial = pathTrial + @"\" + filename; 
-                    if (tcpDownloader.ReceiveFile(pathFileFull, index) == 1)
+                    if (tcpDownloader.Receive_File(pathFileFull, index) == 1)
                     {
                         // Update info account
                         UpdateUserInfoDB(dataUserFile, userConnected[index], null, null, "1");
@@ -795,8 +800,7 @@ namespace Server
                         // Create the trial version of this book
                         CreateTheTrialBook(pathFileFull, pathFileTrial);
 
-                        MessageBox.Show("Upload successfully!");
-                                               
+                        MessageBox.Show("Upload successfully!");                                               
                     }
                     else
                     {
@@ -811,14 +815,15 @@ namespace Server
         private void Downloader_SendingFile(String pathFile, String bookname, int index)
         {
             Thread.Sleep(500);
+
             // Send the start signal
             tcpDownloader.SendDataToClient("Start", index);
 
             // Send the file
             tcpDownloader.SendDataToClient(bookname, index);
-
+            
             // service only client
-            tcpDownloader.SendFile(pathFile, index);
+            tcpDownloader.Send_File(pathFile, index);
 
             // Send the end signal or the last connected
             tcpDownloader.SendDataToClient("End", index);
@@ -909,6 +914,22 @@ namespace Server
             catch (Exception ex)
             {
                 throw ex;
+            }
+        }
+        #endregion
+
+        #region Processing the request get info from client
+        private void Get_Info_Acc(String username, int index)
+        {
+            // Search in DB to find line store the info of userneme
+            foreach (String acc in dataUserFile)
+            {
+                String[] temp = acc.Split('|');
+
+                // Found out the user' info
+                // then send the info to the client
+                if (temp[0] == username)
+                    tcpServer.SendDataToClient("ABOUT|" + acc, index);
             }
         }
         #endregion

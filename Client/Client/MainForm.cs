@@ -124,11 +124,11 @@ namespace Client
                 else
                     this.Close();   // If user is not login, then close this app
             }
-            else if (lfrm.data == "1")
+            else if (lfrm.data == "-1")
             {
                 RunRegisForm();
             }
-            else if (lfrm.data == "-1")
+            else if (lfrm.data == "1")
             {
                 this.Close();
             }
@@ -240,11 +240,11 @@ namespace Client
 
                         MessageBox.Show("Payment is succssful! The download is in background!");
                     }
-                    else if (temp[1] == "NOTENOUGH")
+                    if (temp[1] == "NOTENOUGH")
                     {
                         MessageBox.Show("The current coin is not enough to run this process!");
                     }
-                    else if (temp[1] == "OUTTURN")
+                    if (temp[1] == "OUTTURN")
                     {
                         MessageBox.Show("The turn transfer book is out! Cannot process this!");
                     }
@@ -271,6 +271,14 @@ namespace Client
 
                     }
 
+                    break;
+                case "ABOUT":
+                    // Run info form to show the result
+                    Info frm = new Info(temp[1], temp[3], temp[4]);
+
+                    frm.StartPosition = FormStartPosition.CenterParent;
+
+                    frm.Show();
                     break;
                 default:
                     break;
@@ -380,9 +388,22 @@ namespace Client
                 }
                 else
                 {
-                    if (tcpDownloader.ReceiveFile(pathDownload + @"\" + filename) == 1)
+                    /*
+                    String pathFile = pathDownload + @"\" + filename;
+
+                    if (tcpDownloader.ReceiveFile(pathFile) == 1)
                     {
                         MessageBox.Show("Download successfully!");                        
+                    }
+                    else
+                    {
+                        MessageBox.Show("Download Failed!");
+                    }
+                    */
+
+                    if (tcpDownloader.Receive_File(pathDownload + @"\" + filename) == 1)
+                    {
+                        MessageBox.Show("Download successfully!");
                     }
                     else
                     {
@@ -404,10 +425,11 @@ namespace Client
             // Send the file
             tcpDownloader.Send_Data(bookname);
 
-            Thread.Sleep(250);
-
             // service only client
-            tcpDownloader.SendFile(pathFile);
+            tcpDownloader.Send_File(pathFile);
+
+            // Send the end signal
+            tcpDownloader.Send_Data("End");
         }
         /*****************************************************************************************
          END: the programming for the downloader
@@ -515,7 +537,7 @@ namespace Client
 
         private void btAbout_Click(object sender, EventArgs e)
         {
-
+            tcpClient.Send_Data("ABOUT|" + username);
         }
 
         private void btUpCoin_Click(object sender, EventArgs e)
