@@ -135,6 +135,12 @@ namespace Server
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="pathFile"></param>
+        /// <param name="index"></param>
+        /// <returns></returns>
         public int Send_File(String pathFile, int index)
         {
             // Examples for CanWrite, and CanWrite  

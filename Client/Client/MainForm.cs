@@ -18,7 +18,8 @@ namespace Client
         private String loginStr;
         private TCPModel tcpClient = new TCPModel();
         private TCPModel tcpDownloader = new TCPModel();
-        private String pathDownload = @"D:\VS 2015\NetworkPJ\Client\Client\Downloads";
+        private String pathDownload = Environment.CurrentDirectory + @"\Downloads";
+        private String pathCache = Environment.CurrentDirectory + @"\Cache";
 
         private int pnResultHeight = 0;
 
@@ -26,6 +27,8 @@ namespace Client
         private String username = "";
 
         bool isTransering = false;
+        bool isTrialFile = false;
+
         private String strTransferPath = "";
         #region Initialize the client with own downloader
         public MainForm()
@@ -68,6 +71,7 @@ namespace Client
                 lbStatus.Text = "Offline mode!";
 
                 // Every services using network are disable in offline mode
+                btAbout.Enabled = false;
                 btBookPay.Enabled = false;
                 btRegisAcc.Enabled = false;
                 btUpCoin.Enabled = false;
@@ -136,11 +140,11 @@ namespace Client
 
 
         /// <summary>
-        /// This function process the data which receiv from server,
+        /// This function process the data which receive from server,
         /// the content is processed to decide which type of message,
         /// then transfer to the suitable method for the next action.
         /// </summary>
-        /// <param name="str">ata receive from server</param>
+        /// <param name="str">data receive from server</param>
         private void ProcessingData(String str)
         {
             /****
@@ -156,6 +160,16 @@ namespace Client
             {
                 // Receive this after sending login request
                 case "LOGIN":
+                    // If the account which used to login is onlining
+                    // then cannot login by using it.
+                    if (temp[1] == "ON")
+                    {
+                        MessageBox.Show("This account is used by the other! Please try again!");
+
+                        return;
+                    }
+
+                    // Else the account have not used
                     if (temp[1] == "ACCEPT")
                     {
                         this.Visible = true;
@@ -166,11 +180,13 @@ namespace Client
                         username = temp[2];
 
                         //
+                        btAbout.Enabled = true;
                         btBookPay.Enabled = true;
                         btRegisAcc.Enabled = true;
                         btUpCoin.Enabled = true;
+                        btLogout.Enabled = true;
                     }
-                    else if (temp[1] == "ERROR")
+                    else if (temp[1] == "ERROR")    // If wrong password or username
                     {
                         MessageBox.Show(temp[2]);
 
@@ -215,8 +231,10 @@ namespace Client
                     {
                         OpenFile(temp[2]);
                     }
-                    else if (temp[1] == "CANNOT")
+                    else if (temp[1] == "TRIAL")
                     {
+                        isTrialFile = true;
+
                         MessageBox.Show(temp[2]);
                     }
                     break;
@@ -229,6 +247,19 @@ namespace Client
                     else if (temp[1] == "CANNOT")
                     {
                         MessageBox.Show(temp[2]);
+                    }
+                    break;
+                case "DOWNLOAD":
+                    if (temp[1] == "HAVE")
+                    {
+                        // If this account had download once,
+                        // then send the request to download again without payment
+
+                        tcpClient.Send_Data("DOWNLOAD|AGAIN|" + temp[2]);
+                    }
+                    else if (temp[1] == "NOT")
+                    {
+                        RunPayForm(temp[2], temp[3]);
                     }
                     break;
                 // Receive this after sending payment request
@@ -256,7 +287,7 @@ namespace Client
                         if (temp[2] == "HAD")
                         {
                             MessageBox.Show("This book had exsisted in the server!");
-                        }                            
+                        }
                         else if (temp[2] == "NOT")
                         {
                             // If the server dont have that book
@@ -264,7 +295,7 @@ namespace Client
 
                             tcpClient.Send_Data("TRANSFER|SEND");
                             Downloader_SendingFile(strTransferPath, temp[3]);
-                        }                            
+                        }
                     }
                     else if (temp[1] == "SEND")
                     {
@@ -278,7 +309,12 @@ namespace Client
 
                     frm.StartPosition = FormStartPosition.CenterParent;
 
-                    frm.Show();
+                    // Beacause this method is standing a thread which is not the main one
+                    // so that using invoke and delegate to run this instrument
+                    this.Invoke((MethodInvoker)delegate {
+                        frm.ShowDialog();
+                    });
+                    
                     break;
                 default:
                     break;
@@ -288,14 +324,18 @@ namespace Client
         #region Creating the book cart (Searching)
         private void CreateBookCart(String title, String state, String coin)
         {
+            /* 
+                BOOK CART is an user control is create by myself to the info of book in searching-process
+                it also privide the buttons to control the request to view trial of book or download book
+             */
             // Create and add a book cart
             BookCart bc = new BookCart();
 
             bc.Title = title;
             bc.State = state;
             bc.Coin = coin;
-            bc.OnViewButtonClicked += new EventHandler(ButtonView_Click);
-            bc.OnDownloadButtonClicked += new EventHandler(ButtonDownload_Click);
+            bc.OnViewButtonClicked += new EventHandler(ButtonView_Click);   // Setting the view trial button
+            bc.OnDownloadButtonClicked += new EventHandler(ButtonDownload_Click);   // Setting the download book
             bc.Width = pnResult.Width;
             bc.Location = new Point(0, pnResultHeight);
             //bc.Click += new EventHandler(BookCartItem_Click);
@@ -308,12 +348,61 @@ namespace Client
 
         private void ButtonView_Click(object sender, EventArgs e)
         {
+            BookCart bc = (BookCart)sender;
+
             /* Test data flow instrument */
             MessageBox.Show("View button!");
 
             // Find book in the local place
+            // Get the name of book
+            String bookname = bc.Title;
 
+            /**** CASE 1: Search the book in the local Download folder
+             ****/
+
+            // Search in local place
+            DirectoryInfo dir = new DirectoryInfo(pathDownload);
+
+            foreach (FileInfo file in dir.GetFiles())
+            {
+                int result = bookname.IndexOf(file.Name);
+
+                // If found out the book
+                if (result >= 0)
+                {
+                    // Open it
+                    OpenFile(bookname);
+
+                    return;
+                }
+            }
+
+            /**** CASE 2: Search the book in the Cache folder
+             ****/
+
+            dir = new DirectoryInfo(pathCache);
+
+            foreach (FileInfo file in dir.GetFiles())
+            {
+                int result = bookname.IndexOf(file.Name);
+
+                // If found out the book
+                if (result >= 0)
+                {
+                    // Open it
+                    OpenFile(bookname);
+
+                    return;
+                }
+            }
+
+            /**** CASE 3: Send view trial book request to server
+             ****/
             // If not, view on the server(trial)
+            //
+            String msg = "VIEW|TRIAL|" + bookname;
+
+            tcpClient.Send_Data(msg);
 
         }
 
@@ -326,15 +415,22 @@ namespace Client
             BookCart bc = (BookCart)sender;
 
             // Mapping properties
+            tcpClient.Send_Data("DOWNLOAD|" + username + "|" + bc.Title + "|" + bc.Coin);
+        }
+
+        private void RunPayForm(String title, String coin)
+        {
             // Send to confim form to make sure the user really want this one
-            PaidForm pfrm = new PaidForm(bc.Title, bc.Coin);
+            PaidForm pfrm = new PaidForm(title, coin);
+
             pfrm.StartPosition = FormStartPosition.CenterParent;
 
             if (pfrm.ShowDialog() == DialogResult.OK)
             {
                 tcpClient.Send_Data("PAYMENT|" + pfrm.dataStr);
-            }            
+            }
         }
+
         #endregion
 
         #region Downloader programming section
@@ -385,31 +481,40 @@ namespace Client
                         isTransering = true;
                         continue;
                     }
+                    if (dataIn == "Trial")
+                    {
+                        OpenFile(pathCache + @"\" + filename);
+                    }
                 }
                 else
                 {
-                    /*
-                    String pathFile = pathDownload + @"\" + filename;
+                    String pathFile = "";
 
+                    /*
+                     CASE: If the server send the trial file,
+                            else the server send the paid to download file
+                     */
+                    if (isTrialFile)
+                    {
+                        pathFile = pathCache + @"\" + filename;
+                    }
+                    else
+                    {
+                        pathFile = pathDownload + @"\" + filename;
+                    }
+
+                    /* Check the file downloaded is fail? */
                     if (tcpDownloader.ReceiveFile(pathFile) == 1)
                     {
-                        MessageBox.Show("Download successfully!");                        
-                    }
-                    else
-                    {
-                        MessageBox.Show("Download Failed!");
-                    }
-                    */
-
-                    if (tcpDownloader.Receive_File(pathDownload + @"\" + filename) == 1)
-                    {
-                        MessageBox.Show("Download successfully!");
+                        MessageBox.Show("Download successfully!");                       
                     }
                     else
                     {
                         MessageBox.Show("Download Failed!");
                     }
 
+                    /* Reset the sign flag */
+                    isTrialFile = false;
                     isTransering = false;
                 }
             }
@@ -486,17 +591,17 @@ namespace Client
         }
 
         /******** This function process the openning book ********/
-        private void OpenFile(String path)
+        private void OpenFile(String pathFile)
         {
             //MessageBox.Show(path);
 
             try
             {
-                Process.Start(pathDownload + @"\" + path);
+                Process.Start(pathDownload + @"\" + pathFile);
             }
             catch
             {
-                MessageBox.Show("Cannot open: " + path);
+                MessageBox.Show("Cannot open: " + pathFile);
             }
         }
 
@@ -572,8 +677,7 @@ namespace Client
         {
             /*********
             - Load all files in this folder 
-            - This location is the place store all books which downloaded from th server
-
+            - This location is the place store all books which downloaded from the server
              ********/
             // Clear the listview
             lvResult.Items.Clear();
@@ -616,6 +720,8 @@ namespace Client
         {
             try
             {
+                tcpClient.Send_Data("EXIT");
+
                 tcpDownloader.Disconnect();
                 tcpClient.Disconnect();
             }

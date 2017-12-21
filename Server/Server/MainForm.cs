@@ -11,15 +11,17 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
+using System.Diagnostics;
 /****************************************************************************************************
-    
-    Project the online library. Using TCP client-server model
-    Main features:
-    - Login/Logout
-    - Register new account
-    - Up coin for account
-    - Download book
-    - View book with trial/full mode
+
+Project the online library. Using TCP client-server model
+Main features:
+- Login/Logout
+- Register new account
+- Up coin for account
+- Download book
+- View book with trial/full mode
+- Upload book to server
 
 
 *****************************************************************************************************/
@@ -42,10 +44,11 @@ namespace Server
         private String pathTrial = @"D:\VS 2015\NetworkPJ\Server\Server\Trial";
 
         // Variables used for mapping data from DB
-        List<String> dataUserFile;
-        List<String> dataBookNameList;
-        List<String> dataDownload;
+        List<String> dataUserFile = new List<string>();
+        List<String> dataBookNameList = new List<string>();
+        List<String> dataDownload = new List<string>();
 
+        // This list manage the connected users
         List<String> userConnected = new List<string>();
 
         // Downloader flag
@@ -162,8 +165,15 @@ namespace Server
                 // If the request is login request,
                 // that included: <username>, <password>
                 case "LOGIN":
-                    //MessageBox.Show(temp[1] + " - " + temp[2]);
-                    if (checkAccount(temp[1], temp[2]))
+                    if (CheckOnline(temp[1], temp[2]))
+                    {
+                        // The account is online - connected to server
+                        // so that cannot login by using this account
+                        String dataOut = "LOGIN|ON|" + temp[1];
+
+                        tcpServer.SendDataToClient(dataOut, index);
+                    }
+                    else if (CheckAccount(temp[1], temp[2]))
                     {
                         String dataOut = "LOGIN|ACCEPT|" + temp[1];
                         tcpServer.SendDataToClient(dataOut, index);
@@ -176,36 +186,53 @@ namespace Server
                         String dataOut = "LOGIN|ERROR|Wrong username or password";
                         tcpServer.SendDataToClient(dataOut, index);
                     }
-                    break;
+                break;
                 case "REGIS":
                     RegisNewAccount(temp[1], temp[2], index);
-                    break;
+                break;
                 // If the request is search request,
                 // then get content to search the book's name
                 case "SEARCH":
                     SearchBookNameAndSendResult(temp[1], index);
-                    break;
+                break;
                 // If the request is want to view a book,
                 // then get content to search the book's name
                 case "VIEW":
-                    ViewBookRequestProcessing(temp[1], index);
-                    break;
+                    // If the request is view trial
+                    if (temp[1] == "TRIAL")
+                    {
+                        ViewBookRequestProcessing(temp[2], index);
+                    }
+                break;
                 case "UPCOIN":
                     UpCoinProcessing(temp[2], index);
-                    break;
+                break;
                 // The client want to download the book from server
                 // using coin in account or the transfer turn
+                case "DOWNLOAD":
+                    if (temp[1] == "AGAIN")
+                    {
+                        String pathFile = pathBookFolder + @"\" + temp[2];
+
+                        Downloader_SendingFile(pathFile, temp[2], index);
+                    }
+                    else
+                    {
+                        // If the book is paid then the client have not to pay again to download the book
+                        CheckDownloadList(temp[1], temp[2], temp[3], index);
+                    }
+                    break;
                 case "PAYMENT":
-                    if (temp[1] == "TRANSFER")
+                    if (temp[1] == "TRANSFER")  // Using the free transfer turn to download book
                     {                        
                         TransferBook(temp[2], index);
                     }
-                    else if (temp[1] == "COIN")
+                    else if (temp[1] == "COIN") // Using payment coin to download book
                     {
                         PayCoinToDownloadBook(temp[2], temp[3], index);
                     }
 
-                    break;
+                break;
                 case "TRANSFER":
                     if (temp[1] == "CHECK")
                     {
@@ -218,10 +245,10 @@ namespace Server
                         MessageBox.Show("Successfully! Transfering in the backdround.");
                     }
 
-                    break;
+                break;
                 case "ABOUT":
                     Get_Info_Acc(temp[1], index);
-                    break;
+                break;
                 default:
                     break;
             }
@@ -231,7 +258,18 @@ namespace Server
         #region Checking the account login
         /********  ******** CHECKING ACCOUNT FUCTION *********  ********/
         //
-        private bool checkAccount(String username, String password)
+        private bool CheckOnline(String username, String password)
+        {
+            foreach (String str in userConnected)
+            {
+                if (str == username)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool CheckAccount(String username, String password)
         {
             if (dataUserFile == null)
             {
@@ -311,7 +349,7 @@ namespace Server
                 }
             }
 
-            String data = usrn + "|" + pass + "|0";
+            String data = usrn + "|" + pass + "|0|0";
 
             //FileStream fs = new FileStream(pathUserFile, FileMode.Open);
             using (StreamWriter sw = File.AppendText(pathUserFile))
@@ -485,6 +523,7 @@ namespace Server
         {
             String msg = "VIEW|";
 
+            /*
             foreach (String item in dataDownload)
             {
                 // temp[0]: username
@@ -499,6 +538,7 @@ namespace Server
                     {
                         // Tell the client that you downloaded this one
                         tcpServer.SendDataToClient(msg + "FINDOUT|" + str, index);
+
                         return;
                     }
                 }
@@ -507,9 +547,22 @@ namespace Server
             // If cannot find out
             // that mine this book is not downloaded
             // Have to pay if want to view full book
-            tcpServer.SendDataToClient(msg + "CANNOT|trial", index);
+            
+            */
+
             /******** TO DO *******/
             // Send the trial file of book to client
+            tcpServer.SendDataToClient(msg + "TRIAL", index);
+
+            // Send the start signal
+            tcpDownloader.SendDataToClient("Start", index);
+
+            // Send the file
+            tcpDownloader.SendDataToClient(str, index);
+
+            tcpDownloader.Send_File(pathTrial + @"\" + str, index);
+
+            tcpDownloader.SendDataToClient("Trial", index);
         }
         #endregion
 
@@ -537,6 +590,36 @@ namespace Server
 
 
         #region Processing the paying coin to download book
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="bookname"></param>
+        /// <param name="index"></param>
+        private void CheckDownloadList(String username, String bookname, String coin, int index)
+        {
+            String data = "DOWNLOAD|";
+
+            foreach (String str in dataDownload)
+            {
+                String[] temp = str.Split('|');
+
+                if (temp[0] == username && temp[1] == bookname)
+                {
+                    data += "HAVE|" + bookname;
+
+                    tcpServer.SendDataToClient(data, index);
+
+                    return;
+                }
+            }
+
+            // else
+            data += "NOT|" + bookname + "|" + coin;
+
+            tcpServer.SendDataToClient(data, index);
+        }
+
         /********  ******** PAYMENT FUNCTION *********  ********/
         /// <summary>
         /// 
@@ -934,33 +1017,9 @@ namespace Server
         }
         #endregion
 
-        private void btConnect_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                // Init the main(library) server
-                tcpServer.InitServer(tbIP.Text, tbPort.Text);
-
-                // Init the downloader
-                InitDownloader();
-
-                Thread t = new Thread(SetConnection);
-                t.Start();
-
-                btConnect.Text = "Close";
-            }
-            catch
-            {
-                tcpServer.StopServer();
-
-                btConnect.Text = "Connect";
-            }
-            
-        }
-
         private void btGoLib_Click(object sender, EventArgs e)
         {
-
+            Process.Start(pathBookFolder);
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -974,9 +1033,33 @@ namespace Server
             }
             catch
             {
-                MessageBox.Show("", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //MessageBox.Show("", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                 return;
+            }
+        }
+
+        private void btStart_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Init the main(library) server
+                tcpServer.InitServer(tbIP.Text, tbPort.Text);
+
+                // Init the downloader
+                InitDownloader();
+
+                Thread t = new Thread(SetConnection);
+                t.Start();
+
+                btStart.Text = "Stop";
+            }
+            catch
+            {
+                tcpServer.StopServer();
+                tcpDownloader.StopServer();
+
+                btStart.Text = "Start";
             }
         }
     }

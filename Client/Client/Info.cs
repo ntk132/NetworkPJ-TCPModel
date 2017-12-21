@@ -19,6 +19,8 @@ namespace Client
 
         public Info(String user, String coin, String turn)
         {
+            InitializeComponent();
+
             lbName.Text = user;
             lbCoin.Text = coin;
             lbTurn.Text = turn;
