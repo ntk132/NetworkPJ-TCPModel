@@ -34,6 +34,9 @@ namespace Server
 
             // start server
             server.Start();
+
+            dataIn = new byte[1000];
+            dataOut = new byte[1000];
         }
 
         public bool AcceptConnection()
@@ -75,7 +78,7 @@ namespace Server
         public void SendDataToClient(String str, int index)
         {
             /* Send the result to the client*/
-            dataOut = new byte[100];
+            dataOut = new byte[1000];
 
             ASCIIEncoding asen = new ASCIIEncoding();
 
@@ -95,102 +98,9 @@ namespace Server
             catch
             {
 
-            }
+            }          
         }
-
-        public void SendFile(String pathFile, int index)
-        {
-            byte[] outFile = File.ReadAllBytes(pathFile);
-
-            networkStream[index].Write(outFile, 0, outFile.Length);
-            networkStream[index].Flush();
-        }
-
-        public int ReceiveFile(String savePath, int index)
-        {
-            int thisRead = 0;
-            int blockSize = 1024;
-            Byte[] dataByte = new Byte[blockSize];
-            var ms = new MemoryStream();
-
-            try
-            {
-                while (true)
-                {
-                    if (!networkStream[index].DataAvailable)
-                        break;
-
-                    thisRead = networkStream[index].Read(dataByte, 0, blockSize);
-                    if (thisRead == 0) break;
-                    ms.Write(dataByte, 0, thisRead);
-                }
-
-                File.WriteAllBytes(savePath, ms.ToArray());
-
-                return 1;
-            }
-            catch
-            {
-                return -1;
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="pathFile"></param>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        public int Send_File(String pathFile, int index)
-        {
-            // Examples for CanWrite, and CanWrite  
-
-            // Check to see if this NetworkStream is writable.
-            if (networkStream[index].CanWrite)
-            {
-                byte[] outFile = File.ReadAllBytes(pathFile);
-
-                networkStream[index].Write(outFile, 0, outFile.Length);
-                networkStream[index].Flush();
-
-                return 1;
-            }
-            else
-            {
-                return -1;
-            }
-        }
-
-        public int Receive_File(String savePath, int index)
-        {
-            int thisRead = 0;
-            int blockSize = 1024;
-            Byte[] dataByte = new Byte[blockSize];
-            var ms = new MemoryStream();
-
-            // Examples for CanRead, Read, and DataAvailable.
-
-            // Check to see if this NetworkStream is readable.
-            if (networkStream[index].CanRead)
-            {
-                // Incoming message may be larger than the buffer size.
-                do
-                {
-                    thisRead = networkStream[index].Read(dataByte, 0, blockSize);
-                    ms.Write(dataByte, 0, thisRead);
-                }
-                while (networkStream[index].DataAvailable);
-
-                File.WriteAllBytes(savePath, ms.ToArray());
-
-                return 1;
-            }
-            else
-            {
-                return -1;
-            }
-        }
-
+        
         public void SendDataToAll(String message)
         {
             for (int i = 0; i < counter; i++)
@@ -205,7 +115,7 @@ namespace Server
 
             try
             {
-                dataIn = new byte[100];
+                //dataIn = new byte[1000];
 
                 // Get message from client
                 // k: length of message
@@ -228,6 +138,7 @@ namespace Server
 
                 return null;
             }
+            
         }
 
         public void StopServer()

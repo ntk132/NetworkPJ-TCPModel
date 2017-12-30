@@ -33,6 +33,7 @@
             this.lvResult = new System.Windows.Forms.ListView();
             this.lbStatus = new System.Windows.Forms.Label();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.label1 = new System.Windows.Forms.Label();
             this.btLogout = new System.Windows.Forms.Button();
             this.btRegisAcc = new System.Windows.Forms.Button();
             this.btGoLib = new System.Windows.Forms.Button();
@@ -40,7 +41,6 @@
             this.btUpCoin = new System.Windows.Forms.Button();
             this.btAbout = new System.Windows.Forms.Button();
             this.pnResult = new System.Windows.Forms.Panel();
-            this.label1 = new System.Windows.Forms.Label();
             this.panel1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -103,6 +103,16 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(150, 561);
             this.panel1.TabIndex = 6;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.label1.Location = new System.Drawing.Point(12, 532);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(107, 17);
+            this.label1.TabIndex = 6;
+            this.label1.Text = "UIT - Dormteam";
             // 
             // btLogout
             // 
@@ -211,16 +221,6 @@
             this.pnResult.Size = new System.Drawing.Size(803, 345);
             this.pnResult.TabIndex = 7;
             // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
-            this.label1.Location = new System.Drawing.Point(12, 532);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(107, 17);
-            this.label1.TabIndex = 6;
-            this.label1.Text = "UIT - Dormteam";
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
@@ -234,6 +234,7 @@
             this.Font = new System.Drawing.Font("Century Gothic", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "MainForm";
+            this.ShowIcon = false;
             this.Text = "MainForm";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
             this.Load += new System.EventHandler(this.MainForm_Load);

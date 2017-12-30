@@ -28,8 +28,8 @@ namespace Client
             //stm = tcp.GetStream();
             networkStream = tcp.GetStream();
 
-            dataIn = new byte[100];
-            dataOut = new byte[100];
+            dataIn = new byte[1000];
+            dataOut = new byte[1000];
         }
 
         /******** Receive data ********/
@@ -38,8 +38,8 @@ namespace Client
             try
             {
                 // get message from server
-                //int k = stm.Read(dataIn, 0, 100);
-                int k = networkStream.Read(dataIn, 0, 100);
+                //int k = stm.Read(dataIn, 0, 1000);
+                int k = networkStream.Read(dataIn, 0, 1000);
 
                 char[] c = new char[k];
                 // Create buffer
@@ -64,7 +64,7 @@ namespace Client
             try
             {
                 // Create buffer
-                dataOut = new byte[100];
+                dataOut = new byte[1000];
 
                 // Encode the message to byte[]
                 ASCIIEncoding asen = new ASCIIEncoding();
@@ -80,96 +80,8 @@ namespace Client
             {
                 return false;
             }
-
         }
-
-        public void SendFile(String pathFile)
-        {
-            byte[] outFile = File.ReadAllBytes(pathFile);
-
-            networkStream.Write(outFile, 0, outFile.Length);
-            networkStream.Flush();
-        }
-
-        public int ReceiveFile(String savePath)
-        {
-            int thisRead = 0;
-            int blockSize = 1024;
-            Byte[] dataByte = new Byte[blockSize];
-
-            var ms = new MemoryStream();
-
-            try
-            {
-                while (true)
-                {
-                    if (!networkStream.DataAvailable)
-                        break;
-
-                    thisRead = networkStream.Read(dataByte, 0, blockSize);
-                    ms.Write(dataByte, 0, thisRead);
-                }
-
-                File.WriteAllBytes(savePath, ms.ToArray());
-
-                return 1;
-            }
-            catch
-            {
-                return -1;
-            }
-        }
-
-        public int Send_File(String pathFile)
-        {
-            // Examples for CanWrite, and CanWrite  
-
-            // Check to see if this NetworkStream is writable.
-            if (networkStream.CanWrite)
-            {
-                byte[] outFile = File.ReadAllBytes(pathFile);
-
-                networkStream.Write(outFile, 0, outFile.Length);
-                networkStream.Flush();
-
-                return 1;
-            }
-            else
-            {
-                return -1;
-            }
-        }
-
-        public int Receive_File(String savePath)
-        {
-            int thisRead = 0;
-            int blockSize = 1024;
-            Byte[] dataByte = new Byte[blockSize];
-            var ms = new MemoryStream();
-
-            // Examples for CanRead, Read, and DataAvailable.
-
-            // Check to see if this NetworkStream is readable.
-            if (networkStream.CanRead)
-            {
-                // Incoming message may be larger than the buffer size.
-                do
-                {
-                    thisRead = networkStream.Read(dataByte, 0, blockSize);
-                    ms.Write(dataByte, 0, thisRead);
-                }
-                while (networkStream.DataAvailable);
-
-                File.WriteAllBytes(savePath, ms.ToArray());
-
-                return 1;
-            }
-            else
-            {
-                return -1;
-            }
-        }
-
+        
         public void Disconnect()
         {
             try

@@ -54,5 +54,10 @@ namespace Client
 
             this.Close();
         }
+
+        private void LoginForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+
+        }
     }
 }

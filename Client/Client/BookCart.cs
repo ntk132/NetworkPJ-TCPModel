@@ -15,8 +15,7 @@ namespace Client
         private String title;
         private String state;
         private String coin;
-        public Button btnView;
-        public Button btnDownload;
+        private Image icon;
 
         /*
         public delegate void ButtonClickedEventHandler(object sender, EventArgs e);
@@ -45,16 +44,10 @@ namespace Client
             set { coin = value; }
         }
 
-        public Button ButtonView
+        public Image IconType
         {
-            get { return btnView; }
-            set { btnView = value; }
-        }
-
-        public Button ButtonDownload
-        {
-            get { return btnDownload; }
-            set { btnDownload = value; }
+            get { return icon; }
+            set { icon = value; }
         }
 
         public BookCart()
@@ -64,6 +57,8 @@ namespace Client
             title = "<Unknow>";
             state = "<Unknow>";
             coin = "0";
+
+            pbType.SizeMode = PictureBoxSizeMode.CenterImage;
         }
 
         private void BookCart_MouseHover(object sender, EventArgs e)
@@ -101,6 +96,15 @@ namespace Client
         {
             if (OnDownloadButtonClicked != null)
                 OnDownloadButtonClicked(this, e);
+        }
+
+        private void BookCart_Paint(object sender, PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            Pen p = new Pen(Color.Silver);
+
+            g.DrawLine(p, new Point(0, 0), new Point(this.Size.Width, 0));
+            g.DrawLine(p, new Point(76, 12), new Point(76, 62));
         }
     }
 }

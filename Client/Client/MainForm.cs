@@ -18,7 +18,7 @@ namespace Client
         private String loginStr;
         private TCPModel tcpClient = new TCPModel();
         private TCPModel tcpDownloader = new TCPModel();
-        private String pathDownload = Environment.CurrentDirectory + @"\Downloads";
+        private String pathDownload = Environment.CurrentDirectory + @"\Download";
         private String pathCache = Environment.CurrentDirectory + @"\Cache";
 
         private int pnResultHeight = 0;
@@ -26,10 +26,12 @@ namespace Client
         /******** Information of this client ********/
         private String username = "";
 
+        // Variables used for downloading
         bool isTransering = false;
         bool isTrialFile = false;
 
         private String strTransferPath = "";
+
         #region Initialize the client with own downloader
         public MainForm()
         {
@@ -132,7 +134,7 @@ namespace Client
             {
                 RunRegisForm();
             }
-            else if (lfrm.data == "1")
+            else if (lfrm.data == "1" || lfrm.data == "")
             {
                 this.Close();
             }
@@ -351,7 +353,7 @@ namespace Client
             BookCart bc = (BookCart)sender;
 
             /* Test data flow instrument */
-            MessageBox.Show("View button!");
+            //MessageBox.Show("View button!");
 
             // Find book in the local place
             // Get the name of book
@@ -371,7 +373,7 @@ namespace Client
                 if (result >= 0)
                 {
                     // Open it
-                    OpenFile(bookname);
+                    OpenFile(pathDownload, bookname);
 
                     return;
                 }
@@ -390,7 +392,7 @@ namespace Client
                 if (result >= 0)
                 {
                     // Open it
-                    OpenFile(bookname);
+                    OpenFile(pathCache, bookname);
 
                     return;
                 }
@@ -464,6 +466,7 @@ namespace Client
         private void DownloaderListener(object obj)
         {
             String filename = "";
+            String pathFile = "";
 
             while (true)
             {
@@ -478,60 +481,89 @@ namespace Client
 
                         /* Test data flow instrument */
                         //MessageBox.Show(filename);
+
+                        if (isTrialFile) pathFile = pathCache + @"\" + filename;
+                        else pathFile = pathDownload + @"\" + filename;
+
+                        // Create the empty file
+                        if (!File.Exists(pathFile))
+                        {
+                            using (StreamWriter sw = File.CreateText(pathFile))
+                            {
+                                sw.Write("");
+                            }
+                        }
+
                         isTransering = true;
+
                         continue;
                     }
                     if (dataIn == "Trial")
                     {
-                        OpenFile(pathCache + @"\" + filename);
+                        OpenFile(pathFile);
                     }
                 }
                 else
                 {
-                    String pathFile = "";
-
                     /*
                      CASE: If the server send the trial file,
                             else the server send the paid to download file
                      */
-                    if (isTrialFile)
-                    {
-                        pathFile = pathCache + @"\" + filename;
-                    }
-                    else
-                    {
-                        pathFile = pathDownload + @"\" + filename;
-                    }
+                    // Receive the current data
+                    String data = tcpDownloader.Receive_Data(obj);
 
-                    /* Check the file downloaded is fail? */
-                    if (tcpDownloader.ReceiveFile(pathFile) == 1)
+                    // If the data is still available
+                    if (data != "End")
                     {
-                        MessageBox.Show("Download successfully!");                       
-                    }
-                    else
-                    {
-                        MessageBox.Show("Download Failed!");
-                    }
+                        // Update file line
+                        using (StreamWriter sw = File.AppendText(pathFile))
+                        {
+                            sw.WriteLine(data);
+                            sw.Close();
+                        }
 
-                    /* Reset the sign flag */
-                    isTrialFile = false;
-                    isTransering = false;
+                        // Ready to receive the next one
+                        //tcpDownloader.SendDataToClient("Continue", index);
+                    }
+                    else    // End of sending file (txt)
+                    {
+                        if (isTrialFile)
+                            OpenFile(pathCache, filename);
+                        else
+                            MessageBox.Show("Download successfully!");
+                        /* Reset the sign flag */
+                        isTrialFile = false;
+                        isTransering = false;
+                    }                    
                 }
             }
         }
 
         private void Downloader_SendingFile(String pathFile, String bookname)
         {
+            FileStream fs = new FileStream(pathFile, FileMode.Open);
+            StreamReader sr = new StreamReader(fs);
+
             Thread.Sleep(500);
 
             // Send the start signal
             tcpDownloader.Send_Data("Start");
 
+            Thread.Sleep(250);
+
             // Send the file
             tcpDownloader.Send_Data(bookname);
 
             // service only client
-            tcpDownloader.Send_File(pathFile);
+            while (!sr.EndOfStream)
+            {
+                tcpDownloader.Send_Data(sr.ReadLine());
+
+                Thread.Sleep(100);
+            }
+
+            sr.Close();
+            fs.Close();
 
             // Send the end signal
             tcpDownloader.Send_Data("End");
@@ -591,6 +623,7 @@ namespace Client
         }
 
         /******** This function process the openning book ********/
+        // This function open file which in the download folder
         private void OpenFile(String pathFile)
         {
             //MessageBox.Show(path);
@@ -605,39 +638,18 @@ namespace Client
             }
         }
 
-
-        /******** This function process when click a item in panel - list book cart ********/
-        private void BookCartItem_Click(object sender, EventArgs e)
+        private void OpenFile(String pathFolder, String filename)
         {
-            // Get the oject(BookCart) of this function
-            BookCart bc = (BookCart)sender;
+            //MessageBox.Show(path);
 
-            /* Test data flow instrument
-            MessageBox.Show(bc.Title + "-" + bc.State + "-" + bc.Coin);
-            */
-
-            // Mapping properties
-            // Send to confim form to make sure the user really want this one
-            PaidForm pfrm = new PaidForm(bc.Title, bc.Coin);
-            pfrm.StartPosition = FormStartPosition.CenterParent;
-            if (pfrm.ShowDialog() == DialogResult.OK)
+            try
             {
-                tcpClient.Send_Data("PAYMENT|" + pfrm.dataStr);
+                Process.Start(pathFolder + @"\" + filename);
             }
-
-            /*
-            // Or send this to server directly
-            if (bc.UseTransfer_Checked)
+            catch
             {
-                // Download by useing transfer turn
-                tcpClient.Send_Data("PAYMENT|TRANSFER|" + bc.Title);
+                MessageBox.Show("Cannot open: " + filename);
             }
-            else
-            {
-                // Paying by coin
-                tcpClient.Send_Data("PAYMENT|COIN|" + bc.Title + "|" + bc.Coin);
-            }
-            */      
         }
 
         private void btAbout_Click(object sender, EventArgs e)

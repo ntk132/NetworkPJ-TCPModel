@@ -125,7 +125,9 @@
             this.Controls.Add(this.groupBox1);
             this.Font = new System.Drawing.Font("Century Gothic", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Margin = new System.Windows.Forms.Padding(4);
+            this.MaximizeBox = false;
             this.Name = "UpCoinForm";
+            this.ShowIcon = false;
             this.Text = "UpCoinForm";
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();

@@ -126,7 +126,10 @@
             this.Font = new System.Drawing.Font("Century Gothic", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "LoginForm";
+            this.ShowIcon = false;
+            this.ShowInTaskbar = false;
             this.Text = "LoginForm";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.LoginForm_FormClosing);
             this.ResumeLayout(false);
             this.PerformLayout();
 

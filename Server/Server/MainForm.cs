@@ -9,8 +9,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using iTextSharp.text;
-using iTextSharp.text.pdf;
 using System.Diagnostics;
 /****************************************************************************************************
 
@@ -23,30 +21,31 @@ Main features:
 - View book with trial/full mode
 - Upload book to server
 
+    This project will demo by using .txt file system (both database file and book file)
 
 *****************************************************************************************************/
 namespace Server
 {
     public partial class MainForm : Form
     {
-        int  MAX_COUNT_BOOK = 1000;
-        int MAX_COIN = 25;
-
         private TCPModel tcpServer = new TCPModel();
         private TCPModel tcpDownloader = new TCPModel();
 
         /*
          The DB pathes - This project use the simplest DB - files .txt
-             */
-        private String pathUserFile = @"D:\VS 2015\NetworkPJ\Server\Server\Data\User.txt";
-        private String pathBookFolder = @"D:\VS 2015\NetworkPJ\Server\Server\Books";
-        private String pathDownload = @"D:\VS 2015\NetworkPJ\Server\Server\Data\Download.txt";
-        private String pathTrial = @"D:\VS 2015\NetworkPJ\Server\Server\Trial";
+         */
+        private String pathBookFile = Environment.CurrentDirectory + @"\Data\Book.txt";
+        private String pathDownloadFile = Environment.CurrentDirectory + @"\Data\Download.txt";
+        private String pathUserFile = Environment.CurrentDirectory + @"\Data\User.txt";
+        private String pathBookFolder = Environment.CurrentDirectory + @"\Books";        
+        private String pathTrialFolder = Environment.CurrentDirectory + @"\Trials";
 
         // Variables used for mapping data from DB
+        List<String> dataBookFile = new List<string>();
+        List<String> dataDownloadFile = new List<string>();
         List<String> dataUserFile = new List<string>();
         List<String> dataBookNameList = new List<string>();
-        List<String> dataDownload = new List<string>();
+        
 
         // This list manage the connected users
         List<String> userConnected = new List<string>();
@@ -69,8 +68,9 @@ namespace Server
         private void LoadDB()
         {
             dataBookNameList = LoadBookNameInDB(pathBookFolder);
-            dataUserFile = LoadContentOfFile(pathUserFile);
-            dataDownload = LoadContentOfFile(pathDownload);
+            dataBookFile = LoadContentOfFile(pathBookFile);
+            dataDownloadFile = LoadContentOfFile(pathDownloadFile);
+            dataUserFile = LoadContentOfFile(pathUserFile);            
         }
 
         #region Init the some features, properties of server (maaping the DB to array string)
@@ -154,11 +154,30 @@ namespace Server
         {
             /********
              Recive data like:
-             LOGIN|<username>|<password>
-             SEARCH|<content>
+              - LOGIN|<username>|<password>
+              - SEARCH|<keyword>
+              - REGIS|<username>|<password>
+              - UPCOIN|<coin>
+              - VIEW|TRIAL|<bookname>
+              - TRANSFER|<CHECK>|<bookname>
+             or TRANSFER|<SEND>
+              - PAYMENT|<TRANSFER>|<bookname>
+             or PAYMENT|<COIN>|<bookname>|<coin>
+              - DOWNLOAD|<AGAIN|<bookname>
+             or DOWNLOAD|<username>|<bookname>|<coin>
+              - ABOUT|<username>
              ********/
-            string[] temp = str.Split('|');
+
+            string[] temp;
             
+            try
+            {
+                temp = str.Split('|');
+            }
+            catch
+            {
+                return;
+            }
 
             switch (temp[0])
             {
@@ -179,7 +198,11 @@ namespace Server
                         tcpServer.SendDataToClient(dataOut, index);
 
                         // store the username into the list client
-                        userConnected.Add(temp[1]);
+                        if (userConnected.Count <= 1)
+                            userConnected.Add(temp[1]);
+                        else
+                            userConnected[index] = temp[1];
+
                     }
                     else
                     {
@@ -221,11 +244,11 @@ namespace Server
                         // If the book is paid then the client have not to pay again to download the book
                         CheckDownloadList(temp[1], temp[2], temp[3], index);
                     }
-                    break;
+                break;
                 case "PAYMENT":
                     if (temp[1] == "TRANSFER")  // Using the free transfer turn to download book
                     {                        
-                        TransferBook(temp[2], index);
+                        TransferBookByTurn(temp[2], index);
                     }
                     else if (temp[1] == "COIN") // Using payment coin to download book
                     {
@@ -236,13 +259,13 @@ namespace Server
                 case "TRANSFER":
                     if (temp[1] == "CHECK")
                     {
-                        MessageBox.Show("Check:" + temp[2]);
+                        //MessageBox.Show("Check:" + temp[2]);
 
                         CheckBookInDB(temp[2], index);
                     }
                     else if (temp[1] == "SEND")
                     {
-                        MessageBox.Show("Successfully! Transfering in the backdround.");
+                        //MessageBox.Show("Successfully! Transfering in the backdround.");
                     }
 
                 break;
@@ -322,14 +345,22 @@ namespace Server
                 // Regising is sucessful
                 tcpServer.SendDataToClient("REGIS|DONE", index);
                 tcpServer.SendDataToClient("LOGIN|ACCEPT|" + username, index);
+
+                // store the username into the list client
+                try
+                {
+                    userConnected[index] = username;
+                }
+                catch
+                {
+                    userConnected.Add(username);
+                }                
             }
             else
             {
                 // The collision about the username
                 tcpServer.SendDataToClient("REGIS|ERROR", index);
-            }
-
-            
+            }            
         }
         #endregion
 
@@ -373,20 +404,6 @@ namespace Server
         // then return the result to the client
         private void SearchBookNameAndSendResult(String keyword, int index)
         {
-            /*
-            String key1 = keyword;
-            String key2 = ConvertAllToUpper(keyword);
-            String key3 = ConvertAllToLower(keyword);
-            String key4 = ConvertStringToUpperFirstChar(keyword);
-            int r1 =  ProcessSearchingInDB(key1, index);
-            int r2 = ProcessSearchingInDB(key2, index);
-            int r3 = ProcessSearchingInDB(key3, index);
-            int r4 = ProcessSearchingInDB(key4, index);
-
-            if ((r1 + r2 + r3 + r4) == 0)
-                tcpServer.SendDataToClient("SEARCH|ERROR|No item found out!", index);
-            */
-
             String[] key = new String[4];
             key[0] = keyword;
             key[1] = ConvertAllToUpper(keyword);
@@ -397,19 +414,22 @@ namespace Server
                 tcpServer.SendDataToClient("SEARCH|ERROR|No item found out!", index);
         }
 
+        // Ver 1: keyword is string
         private int ProcessSearchingInDB(String keyword, int index)
         {
             bool isHavingBook = false;
 
-            foreach (String item in dataBookNameList)
+            foreach (String item in dataBookFile)
             {
-                int t = item.IndexOf(keyword);
+                String[] content = item.Split('|');
+
+                int t = content[0].IndexOf(keyword);
 
                 if (t >= 0)
                 {
-                    Thread.Sleep(5);
+                    Thread.Sleep(50);
 
-                    tcpServer.SendDataToClient("SEARCH|ADD|" + item + "|Free|5", index);
+                    tcpServer.SendDataToClient("SEARCH|ADD|" + content[0] + "|Free|" + content[1], index);
 
                     isHavingBook = true;
                 }
@@ -421,16 +441,18 @@ namespace Server
                 return 1;
         }
 
-        // Ver 2
+        // Ver 2: keyword is array string
         private int ProcessSearchingInDB(String[] keyword, int index)
         {
             bool isHavingBook = false;
 
-            foreach (String item in dataBookNameList)
+            foreach (String item in dataBookFile)
             {
+                String[] content = item.Split('|');
+
                 for (int i = 0; i < keyword.Length; i++)
                 {
-                    int t = item.IndexOf(keyword[i]);
+                    int t = content[0].IndexOf(keyword[i]);
 
                     // Found out the result
                     if (t >= 0)
@@ -440,7 +462,7 @@ namespace Server
                         // so that set the delay to decrease the problem
                         Thread.Sleep(50);
 
-                        String data = "SEARCH|ADD|" + item + "|Free|5";
+                        String data = "SEARCH|ADD|" + content[0] + "|Not pay|" + content[1];
                         // Send result to The client
                         tcpServer.SendDataToClient( data, index);
 
@@ -523,46 +545,13 @@ namespace Server
         {
             String msg = "VIEW|";
 
-            /*
-            foreach (String item in dataDownload)
-            {
-                // temp[0]: username
-                // temp[1]: book's name
-                String[] temp = item.Split('|');
-
-                // Find the username in download list
-                if (temp[0] == userConnected[index])
-                {
-                    // Find out that has this book been downloaded before
-                    if (temp[1] == str)
-                    {
-                        // Tell the client that you downloaded this one
-                        tcpServer.SendDataToClient(msg + "FINDOUT|" + str, index);
-
-                        return;
-                    }
-                }
-            }
-
-            // If cannot find out
-            // that mine this book is not downloaded
-            // Have to pay if want to view full book
-            
-            */
-
             /******** TO DO *******/
             // Send the trial file of book to client
             tcpServer.SendDataToClient(msg + "TRIAL", index);
 
-            // Send the start signal
-            tcpDownloader.SendDataToClient("Start", index);
+            String pathTrial = pathTrialFolder + @"\" + str;
 
-            // Send the file
-            tcpDownloader.SendDataToClient(str, index);
-
-            tcpDownloader.Send_File(pathTrial + @"\" + str, index);
-
-            tcpDownloader.SendDataToClient("Trial", index);
+            Downloader_SendingFile(pathTrial, str, index);
         }
         #endregion
 
@@ -600,7 +589,7 @@ namespace Server
         {
             String data = "DOWNLOAD|";
 
-            foreach (String str in dataDownload)
+            foreach (String str in dataDownloadFile)
             {
                 String[] temp = str.Split('|');
 
@@ -646,7 +635,7 @@ namespace Server
                 NewBookDownloaded(bookname, userConnected[index]);
 
                 // Update Mapping
-                dataDownload = LoadContentOfFile(pathDownload);
+                dataDownloadFile = LoadContentOfFile(pathDownloadFile);
             }
             else
             {
@@ -657,6 +646,21 @@ namespace Server
         }
         #endregion
 
+        #region Processing the request get info from client
+        private void Get_Info_Acc(String username, int index)
+        {
+            // Search in DB to find line store the info of userneme
+            foreach (String acc in dataUserFile)
+            {
+                String[] temp = acc.Split('|');
+
+                // Found out the user' info
+                // then send the info to the client
+                if (temp[0] == username)
+                    tcpServer.SendDataToClient("ABOUT|" + acc, index);
+            }
+        }
+        #endregion
 
         #region Access the DB
         /*         
@@ -740,11 +744,32 @@ namespace Server
             return true;
         }
 
+        private void NewBookUpload(String bookname, int lineNumber)
+        {
+            int value = 0;
+
+            if (lineNumber <= 5)
+                value = 1;
+            else if (lineNumber <= 5)
+                value = 2;
+            else
+                value = 5;
+
+            String data = bookname + "|" + value;
+
+            using (StreamWriter sw = File.AppendText(pathBookFile))
+            {
+                sw.WriteLine(data);
+            }
+
+            LoadDB();
+        }
+
         private void NewBookDownloaded(String bookname, String acc)
         {
             String data = acc + "|" + bookname;
 
-            using (StreamWriter sw = File.AppendText(pathDownload))
+            using (StreamWriter sw = File.AppendText(pathDownloadFile))
             {
                 sw.WriteLine(data);
             }
@@ -753,14 +778,13 @@ namespace Server
         }
         #endregion
 
-        
-
+        #region Processing transfer book
         /// <summary>
         /// 
         /// </summary>
         /// <param name="bookname"></param>
         /// <param name="index"></param>
-        private void TransferBook(String bookname, int index)
+        private void TransferBookByTurn(String bookname, int index)
         {
             String msg = "PAYMENT|";
             String pthFl = pathBookFolder + @"\" + bookname;
@@ -779,7 +803,7 @@ namespace Server
                 NewBookDownloaded(bookname, userConnected[index]);
 
                 // Update Mapping
-                dataDownload = LoadContentOfFile(pathDownload);
+                dataDownloadFile = LoadContentOfFile(pathDownloadFile);
             }
             else
             {
@@ -788,8 +812,9 @@ namespace Server
                 tcpServer.SendDataToClient(msg + "OUTTURN", index);
             }
         }
+        #endregion
 
-        #region Processing transfer book
+        #region Processing upload book
         private void CheckBookInDB(String bookname, int index)
         {
             String dataOut = "TRANSFER|CHECK|";
@@ -839,9 +864,10 @@ namespace Server
             {
                 if (tcpDownloader.AcceptConnection())
                 {
-                    MessageBox.Show(tcpDownloader.remotEndPoint);
+                    //MessageBox.Show(tcpDownloader.remotEndPoint);
 
                     Thread t = new Thread(DownloaderListener);
+                    //t.Priority = ThreadPriority.Lowest;
                     t.Start(tcpDownloader.counter - 1);
                 }
             }
@@ -850,7 +876,10 @@ namespace Server
         private void DownloaderListener(object obj)
         {
             int index = (int)obj;
+            int lineCount = 0;
             String filename = "";
+            String pathFileFull = "";
+            String pathFileTrial = "";
 
             while (true)
             {
@@ -861,52 +890,103 @@ namespace Server
                     
                     if (dataIn == "Start")
                     {
+                        // Get the name of file
                         filename = tcpDownloader.ReceiveData(obj);
 
-                        MessageBox.Show(filename);
+                        // Create the pathes
+                        //MessageBox.Show(filename);
+                        pathFileFull = pathBookFolder + @"\" + filename;
+                        pathFileTrial = pathTrialFolder + @"\" + filename;
+
+                        // Create the empty file - full ver
+                        if (!File.Exists(pathFileFull))
+                        {
+                            using (StreamWriter sw = File.CreateText(pathFileFull))
+                            {
+                                sw.Write("");
+                            }
+                        }
+
+                        // Create the empty file - trial ver
+                        if (!File.Exists(pathFileTrial))
+                        {
+                            using (StreamWriter sw = File.CreateText(pathFileTrial))
+                            {
+                                sw.Write("");
+                            }
+                        }
+
+                        // Ready to receive the content of file
                         isTransering = true;
+
                         continue;
                     }
                 }
                 else
                 {
-                    String pathFileFull = pathBookFolder + @"\" + filename;
-                    String pathFileTrial = pathTrial + @"\" + filename; 
-                    if (tcpDownloader.Receive_File(pathFileFull, index) == 1)
+                    // Receive the current data
+                    String data = tcpDownloader.ReceiveData(obj);
+
+                    // If the data is still available
+                    if (data != "End")
+                    {
+                        // Update file line
+                        using (StreamWriter sw = File.AppendText(pathFileFull))
+                        {
+                            sw.WriteLine(data);
+                            lineCount++;
+                        }
+
+                        // Ready to receive the next one
+                        //tcpDownloader.SendDataToClient("Continue", index);
+                    }
+                    else    // End of sending file (txt)
                     {
                         // Update info account
                         UpdateUserInfoDB(dataUserFile, userConnected[index], null, null, "1");
 
                         // Update DB and mapping string
-                        LoadDB();
+                        NewBookUpload(filename, lineCount);
 
-                        // Create the trial version of this book
-                        CreateTheTrialBook(pathFileFull, pathFileTrial);
+                        // Create the trial version of this book - txt version
+                        CreateTheTrialBookTxt(pathFileFull, pathFileTrial);
 
-                        MessageBox.Show("Upload successfully!");                                               
-                    }
-                    else
-                    {
-                        MessageBox.Show("Upload Failed!");
-                    }
+                        tbConnect.AppendText("Upload: " + filename + Environment.NewLine);
 
-                    isTransering = false;
+                        lineCount = 0;
+                        isTransering = false;
+                    }                    
                 }
             }
         }
 
         private void Downloader_SendingFile(String pathFile, String bookname, int index)
         {
+            FileStream fs = new FileStream(pathFile, FileMode.Open);
+            StreamReader sr = new StreamReader(fs);
+
             Thread.Sleep(500);
 
             // Send the start signal
             tcpDownloader.SendDataToClient("Start", index);
 
+            Thread.Sleep(250);
+
             // Send the file
             tcpDownloader.SendDataToClient(bookname, index);
-            
+
             // service only client
-            tcpDownloader.Send_File(pathFile, index);
+            // file's type: pdf
+
+            while (!sr.EndOfStream)
+            {
+                tcpDownloader.SendDataToClient(sr.ReadLine(), index);
+
+                Thread.Sleep(100);
+            }
+
+            sr.Close();
+            fs.Close();
 
             // Send the end signal or the last connected
             tcpDownloader.SendDataToClient("End", index);
@@ -916,103 +996,52 @@ namespace Server
         ******************************************************************************************/
         #endregion
             
-        #region Create trial file (pdf) from the source file
-        /**********************************************************************************************
-        
-        USING: iTextSharp.dll - NuGet package
-        SOURCE FROM THIS METHOD: https://www.codeproject.com/Articles/559380/Splitting-and-Merging-PDF-Files-in-Csharp-Using-iT 
-        
-        ************************************************************************************************/
-
-        public void ExtractPages(string sourcePdfPath, string outputPdfPath, int startPage, int endPage)
+        #region Create trial file (txt) from the source file
+        private void CreateTheTrialBookTxt(string sourcePath, string outputPath)
         {
-            PdfReader reader = null;
-            Document sourceDocument = null;
-            PdfCopy pdfCopyProvider = null;
-            PdfImportedPage importedPage = null;
-
             try
             {
-                // Intialize a new PdfReader instance with the contents of the source Pdf file:
-                reader = new PdfReader(sourcePdfPath);
-
-                // For simplicity, I am assuming all the pages share the same size
-                // and rotation as the first page:
-                sourceDocument = new Document(reader.GetPageSizeWithRotation(startPage));
-
-                // Initialize an instance of the PdfCopyClass with the source 
-                // document and an output file stream:
-                pdfCopyProvider = new PdfCopy(sourceDocument,
-                    new System.IO.FileStream(outputPdfPath, System.IO.FileMode.Create));
-
-                sourceDocument.Open();
-
-                // Walk the specified range and add the page copies to the output file:
-                for (int i = startPage; i <= endPage; i++)
-                {
-                    importedPage = pdfCopyProvider.GetImportedPage(reader, i);
-                    pdfCopyProvider.AddPage(importedPage);
-                }
-                sourceDocument.Close();
-                reader.Close();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
-        private void CreateTheTrialBook(string sourcePdfPath, string outputPdfPath)
-        {
-            PdfReader reader = null;
-
-            try
-            {
-                // 
-                reader = new PdfReader(sourcePdfPath);
-
                 // Count the number of pages of this book
-                int pageCount = reader.NumberOfPages;
+                int lineCount = File.ReadAllLines(sourcePath).Count();
+                // The number of line of the new trial file which've just created
+                int lineGot = 0;
+
+                FileStream fs = new FileStream(sourcePath, FileMode.Open);
+                StreamReader sr = new StreamReader(fs);
+                List<String> newData = new List<string>(); 
 
                 /*
                  OWNER RULE: CREATE THE TRIAL FILE (REVIEW BOOK)
                  With the page of book if the number is:
-                 < 5   - the trial have 2 pages
-                 < 10  - the trial have 4 pages
-                 > 50 - the trial have 10 pages
+                 < 5   - the trial have 2 lines
+                 < 10  - the trial have 4 lines
+                 > 50 - the trial have 10 lines
                 */
-                if (pageCount <= 5)
+                if (lineCount <= 5)
                 {
-                    ExtractPages(sourcePdfPath, outputPdfPath, 1, 2);
+                    lineGot = 2;
                 }
-                else if (pageCount <= 10)
+                else if (lineCount <= 10)
                 {
-                    ExtractPages(sourcePdfPath, outputPdfPath, 1, 4);
+                    lineGot = 4;
                 }
-                else if (pageCount >= 50)
+                else
                 {
-                    ExtractPages(sourcePdfPath, outputPdfPath, 1, 10);
+                    lineGot = 10;
                 }
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-        #endregion
+                
+                using (StreamWriter sw = new StreamWriter(outputPath))
+                {
+                    for (int i = 0; i < lineGot; i++)
+                        sw.WriteLine(sr.ReadLine());
+                }                   
 
-        #region Processing the request get info from client
-        private void Get_Info_Acc(String username, int index)
-        {
-            // Search in DB to find line store the info of userneme
-            foreach (String acc in dataUserFile)
+                sr.Close();
+                fs.Close();
+            }
+            catch
             {
-                String[] temp = acc.Split('|');
-
-                // Found out the user' info
-                // then send the info to the client
-                if (temp[0] == username)
-                    tcpServer.SendDataToClient("ABOUT|" + acc, index);
+                //throw ex;
             }
         }
         #endregion
@@ -1028,13 +1057,9 @@ namespace Server
             {
                 tcpDownloader.StopServer();
                 tcpServer.StopServer();
-
-                Application.Exit();
             }
             catch
             {
-                //MessageBox.Show("", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
                 return;
             }
         }
